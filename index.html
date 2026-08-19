@@ -3,28 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>2111 · Spours</title>
+<title>21 11 · Sour</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg: #0E3634;
-    --bg-deep: #082523;
-    --paper: #F6F3EC;
-    --ink: #0E3634;
-    --clasico: #6FB7C9;
-    --berries: #A15C9E;
-    --frambuesa: #D9536B;
-    --zero: #74C69D;
-    --line: rgba(246,243,236,0.16);
-    --font-display: 'Space Grotesk', sans-serif;
+    --bg: #F7F1E2;
+    --bg-deep: #EFE3C8;
+    --paper: #FFFFFF;
+    --ink: #17392E;
+    --clasico: #C79A2E;
+    --berries: #93478F;
+    --frambuesa: #C5445C;
+    --zero: #3F8F63;
+    --line: rgba(23,57,46,0.14);
+    --font-display: 'Fraunces', serif;
     --font-body: 'Inter', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   body{
     background: var(--bg);
-    color: var(--paper);
+    color: var(--ink);
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     padding-bottom: 90px; /* room for cart bar */
@@ -34,53 +34,89 @@
   /* ---------- HERO ---------- */
   .hero{
     position:relative;
-    padding: 64px 24px 80px;
-    text-align:center;
+    padding: 56px 24px 64px;
     overflow:hidden;
-    background:
-      radial-gradient(circle at 20% 10%, rgba(111,183,201,0.25), transparent 45%),
-      radial-gradient(circle at 85% 25%, rgba(217,83,107,0.22), transparent 40%),
-      radial-gradient(circle at 50% 90%, rgba(116,198,157,0.18), transparent 45%),
-      var(--bg-deep);
+    background: var(--bg-deep);
     border-bottom: 1px solid var(--line);
+  }
+  .hero-inner{
+    max-width: 1040px;
+    margin: 0 auto;
+    display:grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items:center;
+    gap: 32px;
+    position:relative;
+    z-index: 1;
+  }
+  @media (max-width: 760px){
+    .hero-inner{ grid-template-columns: 1fr; text-align:center; }
+    .hero-photo{ order:-1; max-width: 260px; margin: 0 auto; }
   }
   .clock{
     font-family: var(--font-mono);
     font-size: 13px;
     letter-spacing: 0.2em;
-    color: rgba(246,243,236,0.55);
-    margin-bottom: 28px;
+    color: rgba(23,57,46,0.6);
+    margin-bottom: 24px;
   }
   .clock span{color: var(--clasico);}
   .brand{
     font-family: var(--font-display);
-    font-weight: 700;
-    font-size: clamp(72px, 18vw, 148px);
-    line-height: 0.9;
-    letter-spacing: -0.02em;
+    font-weight: 600;
+    font-size: clamp(64px, 11vw, 108px);
+    line-height: 0.92;
+    letter-spacing: -0.01em;
   }
   .brand em{
-    font-style: normal;
-    background: linear-gradient(90deg, var(--clasico), var(--frambuesa));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    font-style: italic;
+    font-weight: 500;
+    color: var(--clasico);
   }
   .tagline{
     font-family: var(--font-display);
-    font-size: clamp(16px, 2.6vw, 22px);
-    color: var(--paper);
+    font-style: italic;
+    font-weight: 500;
+    font-size: clamp(17px, 2.2vw, 21px);
+    color: var(--ink);
     opacity: 0.92;
-    margin-top: 18px;
+    margin-top: 14px;
   }
   .sub{
     font-size: 14px;
-    color: rgba(246,243,236,0.6);
-    margin-top: 10px;
-    max-width: 480px;
-    margin-left:auto;
-    margin-right:auto;
+    color: rgba(23,57,46,0.65);
+    margin-top: 14px;
+    max-width: 420px;
+    line-height: 1.55;
   }
+  @media (max-width: 760px){ .sub{ margin-left:auto; margin-right:auto; } }
+  .hero-photo{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .hero-photo img{
+    width: 100%;
+    max-width: 380px;
+    display:block;
+    filter: drop-shadow(0 24px 30px rgba(0,0,0,0.16));
+  }
+
+  /* ---------- RAMAS DE LIMONERO (detalle decorativo) ---------- */
+  .lemon-decor{
+    position:absolute;
+    width: 130px;
+    height: 130px;
+    z-index: 0;
+    pointer-events:none;
+  }
+  .lemon-decor.fixed{ position:fixed; }
+  .lemon-decor--tl{ top: -18px; left: -18px; }
+  .lemon-decor--tr{ top: -18px; right: -18px; transform: scaleX(-1); }
+  .lemon-decor--br{ bottom: -18px; right: -18px; transform: rotate(180deg); }
+  .lemon-decor--bl{ bottom: -18px; left: -18px; transform: rotate(180deg) scaleX(-1); }
+  @media (max-width: 760px){ .lemon-decor{ display:none; } }
 
   /* ---------- SECTION LABELS ---------- */
   .section-head{
@@ -120,11 +156,11 @@
   .promo-chip{
     font-family: var(--font-mono);
     font-size: 12px;
-    background: rgba(246,243,236,0.06);
+    background: rgba(23,57,46,0.05);
     border: 1px dashed var(--line);
     border-radius: 20px;
     padding: 8px 14px;
-    color: rgba(246,243,236,0.8);
+    color: rgba(23,57,46,0.8);
   }
   .promo-chip b{ color: var(--zero); }
 
@@ -138,7 +174,7 @@
     gap: 16px;
   }
   .card{
-    background: rgba(246,243,236,0.04);
+    background: var(--paper);
     border: 1px solid var(--line);
     border-radius: 14px;
     padding: 22px 20px 20px;
@@ -158,7 +194,7 @@
     top: -9px;
     right: 14px;
     background: var(--flavor, var(--clasico));
-    color: var(--bg-deep);
+    color: var(--ink);
     font-family: var(--font-mono);
     font-size: 10px;
     font-weight: 700;
@@ -175,11 +211,18 @@
     width: 34px; height: 54px;
     display:block;
   }
+  .card-photo{
+    height: 64px;
+    width: auto;
+    border-radius: 6px;
+    object-fit: cover;
+    display:block;
+  }
   .vol{
     font-family: var(--font-mono);
     font-size: 11px;
     letter-spacing: 0.08em;
-    color: rgba(246,243,236,0.55);
+    color: rgba(23,57,46,0.55);
     border: 1px solid var(--line);
     border-radius: 20px;
     padding: 3px 10px;
@@ -192,7 +235,7 @@
   }
   .card .flavor-tag{
     font-size: 12px;
-    color: rgba(246,243,236,0.5);
+    color: rgba(23,57,46,0.5);
   }
   .card .price-row{
     margin-top: auto;
@@ -214,7 +257,7 @@
     display:flex;
     align-items:center;
     gap: 10px;
-    background: rgba(246,243,236,0.06);
+    background: rgba(23,57,46,0.06);
     border-radius: 20px;
     padding: 4px;
   }
@@ -222,14 +265,14 @@
     width: 26px; height: 26px;
     border-radius: 50%;
     border: none;
-    background: rgba(246,243,236,0.12);
-    color: var(--paper);
+    background: rgba(23,57,46,0.1);
+    color: var(--ink);
     font-family: var(--font-mono);
     font-size: 15px;
     cursor: pointer;
     line-height: 1;
   }
-  .stepper button:hover{ background: var(--flavor, var(--clasico)); color: var(--bg-deep); }
+  .stepper button:hover{ background: var(--flavor, var(--clasico)); color: var(--ink); }
   .stepper .qty{
     font-family: var(--font-mono);
     font-size: 14px;
@@ -245,6 +288,8 @@
     display:grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
+    position:relative;
+    z-index: 1;
   }
   @media (max-width: 720px){ .pay-wrap{grid-template-columns: 1fr;} }
   .pay-wrap-single{
@@ -316,7 +361,7 @@
     text-align:center;
     margin-top: 18px;
     background: linear-gradient(90deg, var(--clasico), var(--frambuesa));
-    color: var(--bg-deep);
+    color: var(--ink);
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 15px;
@@ -351,7 +396,7 @@
   .day-btn.selected, .time-btn.selected{
     background: linear-gradient(90deg, var(--clasico), var(--frambuesa));
     border-color: transparent;
-    color: var(--bg-deep);
+    color: var(--ink);
   }
   .day-btn.unavailable, .time-btn.unavailable, .day-btn:disabled, .time-btn:disabled{
     opacity: 0.35;
@@ -410,7 +455,7 @@
     padding: 26px 24px 20px;
     font-family: var(--font-mono);
     font-size: 11px;
-    color: rgba(246,243,236,0.4);
+    color: rgba(23,57,46,0.45);
     letter-spacing: 0.05em;
   }
 
@@ -438,7 +483,7 @@
   .cart-bar .count{
     font-family: var(--font-mono);
     font-size: 11px;
-    color: rgba(246,243,236,0.55);
+    color: rgba(23,57,46,0.55);
   }
   .cart-bar .total{
     font-family: var(--font-display);
@@ -455,7 +500,7 @@
     font-weight: 700;
     font-size: 14px;
     background: linear-gradient(90deg, var(--clasico), var(--frambuesa));
-    color: var(--bg-deep);
+    color: var(--ink);
     border: none;
     border-radius: 10px;
     padding: 12px 20px;
@@ -561,7 +606,7 @@
     display:block;
     text-align:center;
     background: linear-gradient(90deg, var(--clasico), var(--frambuesa));
-    color: var(--bg-deep);
+    color: var(--ink);
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 14px;
@@ -640,7 +685,7 @@
   .stock-badge{
     font-family: var(--font-mono);
     font-size: 10px;
-    color: rgba(246,243,236,0.4);
+    color: rgba(23,57,46,0.45);
     letter-spacing: 0.04em;
   }
   .stock-badge.low{ color: var(--frambuesa); }
@@ -652,8 +697,8 @@
     position:absolute;
     top: -9px;
     right: 14px;
-    background: rgba(246,243,236,0.85);
-    color: var(--bg-deep);
+    background: var(--ink);
+    color: var(--bg);
     font-family: var(--font-mono);
     font-size: 10px;
     font-weight: 700;
@@ -665,7 +710,7 @@
     opacity: 0.3;
     cursor: not-allowed;
   }
-  .stepper button:disabled:hover{ background: rgba(246,243,236,0.12); color: var(--paper); }
+  .stepper button:disabled:hover{ background: rgba(23,57,46,0.1); color: var(--ink); }
 
   /* ---------- CONFIRM FLOW ---------- */
   .confirm-btn{
@@ -673,7 +718,7 @@
     width:100%;
     text-align:center;
     background: linear-gradient(90deg, var(--clasico), var(--frambuesa));
-    color: var(--bg-deep);
+    color: var(--ink);
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 14px;
@@ -741,9 +786,9 @@
     padding: 0 24px;
   }
   .payment-close button{
-    background: rgba(246,243,236,0.1);
+    background: rgba(23,57,46,0.08);
     border: none;
-    color: var(--paper);
+    color: var(--ink);
     font-size: 18px;
     width: 36px; height: 36px;
     border-radius: 50%;
@@ -752,13 +797,13 @@
   .payment-back{
     background: none;
     border: none;
-    color: rgba(246,243,236,0.7);
+    color: rgba(23,57,46,0.65);
     font-family: var(--font-mono);
     font-size: 13px;
     cursor: pointer;
     padding: 8px 4px;
   }
-  .payment-back:hover{ color: var(--paper); }
+  .payment-back:hover{ color: var(--ink); }
   .select-method-btn{
     display:block;
     width:100%;
@@ -800,7 +845,6 @@
     line-height: 1.5;
   }
   .pay-notify-inline.sent .pay-notify-status{ color: #1a7a4c; font-weight: 700; }
-
 
   /* ---------- PANTALLA DE AGRADECIMIENTO ---------- */
   .thankyou-overlay{
@@ -883,11 +927,20 @@
 </head>
 <body>
 
+
+
 <section class="hero">
-  <div class="clock">EDICIÓN <span>21:11</span> — AGUA SABORIZADA</div>
-  <div class="brand">21<em>11</em></div>
-  <div class="tagline">by Spours</div>
-  <p class="sub">Clásico, Berries, Frambuesa y Zero. En botella de 1L o 475ml, para cuando el reloj marca hidratarte.</p>
+  <div class="hero-inner">
+    <div class="hero-text">
+      <div class="clock">EDICIÓN <span>21:11</span> — SOUR COCKTAIL</div>
+      <div class="brand">21<em>11</em></div>
+      <div class="tagline">Sours by 2111</div>
+      <p class="sub">Clásico, Berries, Frambuesa y Zero. Cóctel sour listo para tomar, en botella de 1L o 475ml — la coctelería con la que el reloj marca las 21:11.</p>
+    </div>
+    <div class="hero-photo">
+      <img src="logo-arbol.png" alt="Limonero 21 11 Sour, ilustración de marca">
+    </div>
+  </div>
 </section>
 
 <div class="section-head">
@@ -970,7 +1023,7 @@
   </div>
 </div>
 
-<footer>2111 × SPOURS — HECHO PARA HIDRATAR</footer>
+<footer>21 11 — SOURS DE VERDAD</footer>
 
 <!-- PANTALLA DE AGRADECIMIENTO (tapa toda la pantalla, como una ventana aparte) -->
 <div class="thankyou-overlay" id="thankYouOverlay">
@@ -1028,7 +1081,7 @@ const STOCK_API_URL = 'https://script.google.com/macros/s/AKfycbyuHVH05FHc5dBuW6
 const OWNER_WHATSAPP = '56977690321'; // tu número, sin + ni espacios
 
 function buildOrderSummary(order){
-  let text = `Pedido 2111 · Spours\n\n`;
+  let text = `Pedido 21 11 Sour\n\n`;
   text += `Cliente: ${customer.nombre}\n`;
   text += `Teléfono: ${customer.telefono}\n`;
   text += `Dirección: ${customer.direccion}\n\n`;
@@ -1165,15 +1218,17 @@ products.forEach(p => {
   if(p.vol === '1L') promoTag = '<div class="promo-tag">2x -$2.000</div>';
   if(p.id === 'berries-475') promoTag = '<div class="promo-tag">2x $15.000</div>';
 
+  const bottleVisual = bottleSVG(f.color);
+
   card.innerHTML = `
     ${promoTag}
     <div class="bottle-row">
-      ${bottleSVG(f.color)}
+      ${bottleVisual}
       <span class="vol">${p.vol}</span>
     </div>
     <div>
       <h3>${f.label}</h3>
-      <div class="flavor-tag">2111 · Spours</div>
+      <div class="flavor-tag">21 11 · Sour</div>
       <div class="stock-badge" id="stock-${p.id}"></div>
     </div>
     <div class="price-row">
@@ -1568,6 +1623,34 @@ function copyText(text, btn){
     }, 1500);
   });
 }
+
+// ---------- RAMAS DE LIMONERO (detalle decorativo, sutil, en las esquinas) ----------
+const LEMON_BRANCH_SVG = `<svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
+  <path d="M155 5 C 120 20, 90 45, 65 80 C 50 100, 40 120, 20 155" stroke="var(--ink)" stroke-width="2.5" fill="none" opacity="0.4"/>
+  <ellipse cx="95" cy="38" rx="16" ry="8" fill="var(--ink)" opacity="0.22" transform="rotate(35 95 38)"/>
+  <ellipse cx="70" cy="68" rx="18" ry="9" fill="var(--ink)" opacity="0.22" transform="rotate(-20 70 68)"/>
+  <ellipse cx="45" cy="105" rx="16" ry="8" fill="var(--ink)" opacity="0.22" transform="rotate(40 45 105)"/>
+  <circle cx="108" cy="55" r="11" fill="var(--clasico)" opacity="0.45"/>
+  <circle cx="55" cy="92" r="13" fill="var(--clasico)" opacity="0.45"/>
+  <circle cx="30" cy="130" r="10" fill="var(--clasico)" opacity="0.45"/>
+</svg>`;
+
+function addLemonDecor(container, position, fixed){
+  if(!container) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'lemon-decor lemon-decor--' + position + (fixed ? ' fixed' : '');
+  wrap.innerHTML = LEMON_BRANCH_SVG;
+  container.appendChild(wrap);
+}
+
+addLemonDecor(document.querySelector('.hero'), 'tl');
+addLemonDecor(document.querySelector('.hero'), 'br');
+addLemonDecor(document.getElementById('deliverySection'), 'tr', true);
+addLemonDecor(document.getElementById('deliverySection'), 'bl', true);
+addLemonDecor(document.getElementById('paymentSection'), 'tr', true);
+addLemonDecor(document.getElementById('paymentSection'), 'bl', true);
+addLemonDecor(document.getElementById('thankYouOverlay'), 'tr', true);
+addLemonDecor(document.getElementById('thankYouOverlay'), 'bl', true);
 
 updateCart();
 loadStock();

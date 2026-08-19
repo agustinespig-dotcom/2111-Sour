@@ -323,7 +323,42 @@
     padding: 14px;
     border-radius: 10px;
     text-decoration:none;
+    cursor: pointer;
   }
+  .mp-btn:disabled{
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .day-picker, .time-picker{
+    display:flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .day-btn, .time-btn{
+    flex:1;
+    background: rgba(14,54,52,0.05);
+    border: 1px solid rgba(14,54,52,0.18);
+    border-radius: 10px;
+    padding: 12px 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .time-btn{ font-family: var(--font-mono); font-size: 13px; }
+  .day-btn:hover, .time-btn:hover{ border-color: var(--frambuesa); }
+  .day-btn.selected, .time-btn.selected{
+    background: linear-gradient(90deg, var(--clasico), var(--frambuesa));
+    border-color: transparent;
+    color: var(--bg-deep);
+  }
+  .day-btn.unavailable, .time-btn.unavailable, .day-btn:disabled, .time-btn:disabled{
+    opacity: 0.35;
+    cursor: not-allowed;
+    text-decoration: line-through;
+  }
+  .day-btn.unavailable:hover, .time-btn.unavailable:hover{ border-color: rgba(14,54,52,0.18); }
   .mp-note{
     font-size: 11px;
     color: rgba(14,54,52,0.55);
@@ -699,7 +734,8 @@
     position: sticky;
     top: 0;
     display:flex;
-    justify-content:flex-end;
+    justify-content:space-between;
+    align-items:center;
     max-width: 1040px;
     margin: 0 auto;
     padding: 0 24px;
@@ -713,6 +749,16 @@
     border-radius: 50%;
     cursor:pointer;
   }
+  .payment-back{
+    background: none;
+    border: none;
+    color: rgba(246,243,236,0.7);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 8px 4px;
+  }
+  .payment-back:hover{ color: var(--paper); }
   .select-method-btn{
     display:block;
     width:100%;
@@ -858,15 +904,48 @@
 <div class="catalog" id="catalog"></div>
 
 <div class="confirm-banner" id="confirmBanner">
-  <div class="box">✅ Pedido confirmado y reservado. Elegí abajo cómo vas a pagar.</div>
+  <div class="box">✅ Pedido confirmado y reservado. Elegí abajo cuándo lo querés y cómo pagarlo.</div>
+</div>
+
+<div class="payment-section" id="deliverySection">
+  <div class="payment-close">
+    <button class="payment-back" onclick="backToCartFromDelivery()">← Volver al carrito</button>
+    <button onclick="closeDeliverySection()">✕</button>
+  </div>
+  <div class="section-head">
+    <span class="num">02</span>
+    <h2>¿Para cuándo lo necesitás?</h2>
+    <span class="rule"></span>
+  </div>
+
+  <div class="pay-wrap pay-wrap-single">
+    <div class="ticket">
+      <h3>Elegí el día de entrega</h3>
+      <p class="mp-instructions">Elegí el día y horario disponible esta semana (los días tachados no tienen entrega por ahora):</p>
+      <div class="day-picker">
+        <button class="day-btn" data-day="L" onclick="selectDeliveryDay('L')">L</button>
+        <button class="day-btn" data-day="M" onclick="selectDeliveryDay('M')">M</button>
+        <button class="day-btn" data-day="X" onclick="selectDeliveryDay('X')">X</button>
+        <button class="day-btn" data-day="J" onclick="selectDeliveryDay('J')">J</button>
+        <button class="day-btn" data-day="V" onclick="selectDeliveryDay('V')">V</button>
+      </div>
+      <p class="mp-instructions" style="margin-top:18px;">¿Mañana o tarde?</p>
+      <div class="time-picker">
+        <button class="time-btn" data-time="AM" onclick="selectDeliveryTime('AM')">AM</button>
+        <button class="time-btn" data-time="PM" onclick="selectDeliveryTime('PM')">PM</button>
+      </div>
+      <button class="mp-btn" id="deliveryContinueBtn" onclick="continueToPayment()" disabled style="width:100%; border:none; margin-top:22px;">Continuar a pagar →</button>
+    </div>
+  </div>
 </div>
 
 <div class="payment-section" id="paymentSection">
   <div class="payment-close">
+    <button class="payment-back" onclick="backToDeliveryFromPayment()">← Volver</button>
     <button onclick="closePaymentSection()">✕</button>
   </div>
   <div class="section-head">
-    <span class="num">02</span>
+    <span class="num">03</span>
     <h2>Elegí cómo pagar</h2>
     <span class="rule"></span>
   </div>
@@ -975,17 +1054,32 @@ let lastOrderResumen = ''; // texto del último pedido confirmado, para el aviso
 let lastOrderTotal = 0;
 
 // ---------- STOCK: cargar desde Google Sheets ----------
+let deliveryAvailability = null; // { L:{AM,PM}, M:{...}, ... } — null = todavía no cargó, tratamos todo como disponible
+
 async function loadStock(){
   try{
     const res = await fetch(STOCK_API_URL, { cache: 'no-store' });
     const data = await res.json();
-    stockData = data;
+    stockData = data.stock || data; // 'data' a secas es compatibilidad con una versión vieja del script
+    deliveryAvailability = data.delivery || null;
     stockLoaded = true;
     applyStockToUI();
+    applyDeliveryAvailabilityToUI();
   } catch(err){
     console.error('No se pudo cargar el stock', err);
     // Si falla, dejamos comprar igual (el chequeo real ocurre al confirmar)
   }
+}
+
+function applyDeliveryAvailabilityToUI(){
+  if(!deliveryAvailability) return; // sin datos, dejamos todo habilitado
+  document.querySelectorAll('.day-btn').forEach(btn => {
+    const code = btn.dataset.day;
+    const avail = deliveryAvailability[code];
+    const dayHasSlot = avail && (avail.AM || avail.PM);
+    btn.disabled = !dayHasSlot;
+    btn.classList.toggle('unavailable', !dayHasSlot);
+  });
 }
 
 function applyStockToUI(){
@@ -1259,8 +1353,14 @@ function confirmOrder(){
   paymentNotifySent = false; // este es un pedido nuevo, puede mandar su propio aviso
   awaitingReturnFromPay = false;
   selectedPayMethod = null;
+  selectedDeliveryDay = null;
+  selectedDeliveryTime = null;
   document.getElementById('ticket-mp').classList.remove('selected');
   document.getElementById('payNotifyBar').classList.remove('visible', 'sent');
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.time-btn').forEach(b => { b.classList.remove('selected', 'unavailable'); b.disabled = false; });
+  applyDeliveryAvailabilityToUI(); // re-aplica qué días están habilitados esta semana
+  document.getElementById('deliveryContinueBtn').disabled = true;
   const mpAmountEl = document.getElementById('mpAmount');
   if(mpAmountEl) mpAmountEl.textContent = '$' + money(order.total);
 
@@ -1276,8 +1376,87 @@ function confirmOrder(){
 
   closeDrawer();
   document.getElementById('confirmBanner').classList.add('visible');
+  document.getElementById('deliverySection').classList.add('visible');
+  document.getElementById('deliverySection').scrollTop = 0;
+}
+
+let selectedDeliveryDay = null;  // 'L' | 'M' | 'X' | 'J' | 'V'
+let selectedDeliveryTime = null; // 'AM' | 'PM'
+const deliveryDayLabels = { L: 'Lunes', M: 'Martes', X: 'Miércoles', J: 'Jueves', V: 'Viernes' };
+
+function selectDeliveryDay(code){
+  const btn = document.querySelector(`.day-btn[data-day="${code}"]`);
+  if(btn && btn.disabled) return; // ese día no se entrega esta semana
+
+  selectedDeliveryDay = code;
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.toggle('selected', b.dataset.day === code));
+
+  // Deshabilitamos el horario que no esté disponible ese día en particular
+  const avail = deliveryAvailability ? deliveryAvailability[code] : null;
+  document.querySelectorAll('.time-btn').forEach(b => {
+    const slot = b.dataset.time;
+    const enabled = !avail || avail[slot]; // sin datos = todo habilitado
+    b.disabled = !enabled;
+    b.classList.toggle('unavailable', !enabled);
+    if(!enabled && selectedDeliveryTime === slot){
+      selectedDeliveryTime = null;
+      b.classList.remove('selected');
+    }
+  });
+
+  updateDeliveryContinueState();
+}
+
+function selectDeliveryTime(slot){
+  selectedDeliveryTime = slot;
+  document.querySelectorAll('.time-btn').forEach(b => b.classList.toggle('selected', b.dataset.time === slot));
+  updateDeliveryContinueState();
+}
+
+function updateDeliveryContinueState(){
+  document.getElementById('deliveryContinueBtn').disabled = !(selectedDeliveryDay && selectedDeliveryTime);
+}
+
+function continueToPayment(){
+  if(!selectedDeliveryDay || !selectedDeliveryTime) return;
+
+  document.getElementById('deliverySection').classList.remove('visible');
   document.getElementById('paymentSection').classList.add('visible');
   document.getElementById('paymentSection').scrollTop = 0;
+}
+
+function backToDeliveryFromPayment(){
+  document.getElementById('paymentSection').classList.remove('visible');
+  document.getElementById('deliverySection').classList.add('visible');
+  document.getElementById('deliverySection').scrollTop = 0;
+}
+
+function backToCartFromDelivery(){
+  document.getElementById('deliverySection').classList.remove('visible');
+  document.getElementById('confirmBanner').classList.remove('visible');
+
+  // Recuperamos los productos del pedido que ya había armado, para que no vea el carrito vacío
+  Object.keys(lastOrderItems).forEach(id => {
+    cart[id] = lastOrderItems[id];
+    const qtyEl = document.getElementById('qty-' + id);
+    const cardEl = document.getElementById('card-' + id);
+    if(qtyEl) qtyEl.textContent = lastOrderItems[id];
+    if(cardEl) cardEl.classList.add('in-cart');
+  });
+  applyStockToUI();
+  updateCart();
+  openDrawer();
+}
+
+// Arma el texto final del pedido (pedido + entrega elegida, si ya la eligió).
+// Se recalcula cada vez que hace falta en vez de pegarse al resumen original,
+// para que ir y volver entre ventanas nunca duplique la línea de entrega.
+function getFullOrderText(){
+  if(selectedDeliveryDay && selectedDeliveryTime){
+    const deliveryLine = `Entrega deseada: ${deliveryDayLabels[selectedDeliveryDay]} (${selectedDeliveryTime})`;
+    return lastOrderResumen + `\n\n${deliveryLine}`;
+  }
+  return lastOrderResumen;
 }
 
 let lastOrderItems = {}; // id -> qty del último pedido armado, se manda al servidor recién al elegir método de pago
@@ -1314,7 +1493,7 @@ async function selectPayMethod(method){
         items: lastOrderItems,
         customer: customer,
         total: lastOrderTotal,
-        resumen: lastOrderResumen
+        resumen: getFullOrderText()
       })
     });
     const data = await res.json();
@@ -1339,7 +1518,7 @@ async function selectPayMethod(method){
 
 function notifyPaymentFallback(){
   if(!lastOrderResumen) return;
-  const waText = encodeURIComponent(lastOrderResumen + `\n\nMétodo de pago: Mercado Pago`);
+  const waText = encodeURIComponent(getFullOrderText() + `\n\nMétodo de pago: Mercado Pago`);
   window.open(`https://wa.me/${OWNER_WHATSAPP}?text=${waText}`, '_blank');
   paymentNotifySent = true;
   document.getElementById('payNotifyStatus').textContent = '✅ Aviso enviado por WhatsApp.';
@@ -1350,7 +1529,7 @@ function notifyPaymentFallback(){
 function showThankYou(){
   const nombre = customer.nombre ? customer.nombre.split(' ')[0] : '';
   document.getElementById('thankYouTitle').textContent = nombre ? `¡Gracias, ${nombre}! 🎉` : '¡Gracias por tu compra! 🎉';
-  document.getElementById('thankYouSummary').textContent = lastOrderResumen || 'No encontramos el detalle del pedido.';
+  document.getElementById('thankYouSummary').textContent = getFullOrderText() || 'No encontramos el detalle del pedido.';
   document.getElementById('thankYouOverlay').classList.add('visible');
 }
 
@@ -1358,10 +1537,15 @@ function closeThankYou(){
   document.getElementById('thankYouOverlay').classList.remove('visible');
   document.getElementById('confirmBanner').classList.remove('visible'); // ya terminó todo el proceso, no hace falta seguir mostrándolo
   closePaymentSection(); // al terminar, volvemos al catálogo normal
+  closeDeliverySection();
 }
 
 function closePaymentSection(){
   document.getElementById('paymentSection').classList.remove('visible');
+}
+
+function closeDeliverySection(){
+  document.getElementById('deliverySection').classList.remove('visible');
 }
 
 function openDrawer(){

@@ -1555,7 +1555,7 @@ async function goToMercadoPago(){
       throw new Error(data.error || 'fallo desconocido');
     }
   } catch(err){
-    document.getElementById('payNotifyStatus').textContent = 'No pudimos generar el link de pago 😕 — probá de nuevo en un rato.';
+    document.getElementById('payNotifyStatus').textContent = 'No pudimos generar el link de pago 😕 — ' + (err.message || 'probá de nuevo en un rato.');
     btn.textContent = 'Pagar ahora →';
     btn.disabled = false;
   }

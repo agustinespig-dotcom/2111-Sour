@@ -1061,24 +1061,24 @@
 <div class="catalog" id="catalog"></div>
 
 <div class="confirm-banner" id="confirmBanner">
-  <div class="box">✅ Pedido confirmado y reservado. Elegí abajo cuándo lo querés y cómo pagarlo.</div>
+  <div class="box">✅ Pedido confirmado y reservado. Elige abajo cuándo lo quieres y cómo pagarlo.</div>
 </div>
 
 <div class="payment-section" id="deliverySection">
   <div class="payment-close">
     <button class="payment-back" onclick="backToCartFromDelivery()">← Volver al carrito</button>
-    <button onclick="closeDeliverySection()">✕</button>
+    <button onclick="cancelToCart()">✕</button>
   </div>
   <div class="section-head">
     <span class="num">02</span>
-    <h2>¿Para cuándo lo necesitás?</h2>
+    <h2>¿Para cuándo lo necesitas?</h2>
     <span class="rule"></span>
   </div>
 
   <div class="pay-wrap pay-wrap-single">
     <div class="ticket">
-      <h3>Elegí el día de entrega</h3>
-      <p class="mp-instructions">Elegí el día y horario disponible esta semana (los días tachados no tienen entrega por ahora):</p>
+      <h3>Elige el día de entrega</h3>
+      <p class="mp-instructions">Elige el día y horario disponible esta semana (los días tachados no tienen entrega por ahora):</p>
       <div class="day-picker">
         <button class="day-btn" data-day="L" onclick="selectDeliveryDay('L')">L</button>
         <button class="day-btn" data-day="M" onclick="selectDeliveryDay('M')">M</button>
@@ -1099,18 +1099,18 @@
 <div class="payment-section" id="paymentSection">
   <div class="payment-close">
     <button class="payment-back" onclick="backToDeliveryFromPayment()">← Volver</button>
-    <button onclick="closePaymentSection()">✕</button>
+    <button onclick="cancelToCart()">✕</button>
   </div>
   <div class="section-head">
     <span class="num">03</span>
-    <h2>Elegí cómo pagar</h2>
+    <h2>Elige cómo pagar</h2>
     <span class="rule"></span>
   </div>
 
   <div class="pay-wrap pay-wrap-single">
     <div class="ticket" id="ticket-mp">
       <h3>Pagá con tu banco, Mercado Pago o transferencia</h3>
-      <p class="mp-instructions">Mercado Pago acepta todo: tarjeta, saldo en cuenta o transferencia bancaria, todo desde el mismo botón. El monto ya viene cargado automáticamente, no tenés que escribir nada:</p>
+      <p class="mp-instructions">Mercado Pago acepta todo: tarjeta, saldo en cuenta o transferencia bancaria, todo desde el mismo botón. El monto ya viene cargado automáticamente, no tienes que escribir nada:</p>
       <div class="row amount-row">
         <span class="label">Monto a pagar</span>
         <span class="value amount-value" id="mpAmount">$0</span>
@@ -1156,7 +1156,7 @@
 <!-- BOTÓN FLOTANTE DE WHATSAPP -->
 <a class="whatsapp-fab" id="whatsappFab" href="#" target="_blank" rel="noopener">
   <span class="whatsapp-fab-icon">💬</span>
-  <span class="whatsapp-fab-text">¿Tenés dudas?<br>Hablá conmigo</span>
+  <span class="whatsapp-fab-text">¿Tienes dudas?<br>Habla conmigo</span>
 </a>
 
 <!-- OVERLAY + DRAWER -->
@@ -1553,7 +1553,7 @@ function updateCart(){
   const savingsEl = document.getElementById('cartSavings');
   if(order.discount > 0){
     savingsEl.style.display = 'block';
-    savingsEl.textContent = `Ahorrás $${money(order.discount)}`;
+    savingsEl.textContent = `Ahorras $${money(order.discount)}`;
   } else {
     savingsEl.style.display = 'none';
   }
@@ -1564,7 +1564,7 @@ function updateCart(){
 function renderDrawer(order){
   const body = document.getElementById('drawerBody');
   if(order.items.length === 0){
-    body.innerHTML = '<p class="drawer-empty">Todavía no agregaste productos.<br>Elegí desde el catálogo →</p>';
+    body.innerHTML = '<p class="drawer-empty">Todavía no agregaste productos.<br>Elige desde el catálogo →</p>';
     return;
   }
 
@@ -1637,7 +1637,7 @@ function confirmOrder(){
   // el descuento real recién pasa cuando el cliente elige método de pago).
   const insufficient = order.items.filter(i => stockData[i.id] !== undefined && i.qty > stockData[i.id]);
   if(insufficient.length > 0){
-    errorBox.textContent = 'Uy, alguien se llevó parte del stock mientras armabas el pedido. Ajustá las cantidades e intentá de nuevo.';
+    errorBox.textContent = 'Uy, alguien se llevó parte del stock mientras armabas el pedido. Ajusta las cantidades e intenta de nuevo.';
     errorBox.style.display = 'block';
     applyStockToUI();
     renderDrawer(computeOrder());
@@ -1808,7 +1808,7 @@ async function goToMercadoPago(){
       }
       awaitingReturnFromPay = true;
       lastOrderId = data.orderId || null;
-      document.getElementById('payNotifyStatus').textContent = '✅ Te abrimos Mercado Pago en otra pestaña, con el monto ya cargado — no tenés que escribir nada. Cuando termines de pagar y vuelvas acá, te mostramos la confirmación sola.';
+      document.getElementById('payNotifyStatus').textContent = '✅ Te abrimos Mercado Pago en otra pestaña, con el monto ya cargado — no tienes que escribir nada. Cuando termines de pagar y vuelvas acá, te mostramos la confirmación sola.';
       document.getElementById('payNotifyBar').classList.add('sent');
       if(payWindow){
         payWindow.location.href = data.init_point;
@@ -1824,7 +1824,7 @@ async function goToMercadoPago(){
       // Alguien se llevó el stock justo mientras el cliente iba a pagar
       if(payWindow) payWindow.close();
       if(data.stock){ stockData = data.stock; applyStockToUI(); }
-      document.getElementById('payNotifyStatus').textContent = '⚠️ ' + (data.error || 'Nos quedamos sin stock de algo de tu pedido.') + ' Cerrá esta ventana y ajustá el carrito.';
+      document.getElementById('payNotifyStatus').textContent = '⚠️ ' + (data.error || 'Nos quedamos sin stock de algo de tu pedido.') + ' Cierra esta ventana y ajusta el carrito.';
       btn.textContent = 'Pagar ahora →';
       btn.disabled = false;
     } else {
@@ -1852,10 +1852,34 @@ function closeThankYou(){
   closeDeliverySection();
 }
 
+// La X, apretada desde CUALQUIERA de las dos ventanas (envío o pago), cancela
+// todo el flujo y vuelve al inicio (catálogo) con el pedido restaurado al
+// carrito EN SILENCIO — no abre el cajón solo; el pedido queda guardado ahí
+// por si lo quiere retomar, pero no lo interrumpe con nada.
+function cancelToCart(){
+  document.getElementById('deliverySection').classList.remove('visible');
+  document.getElementById('paymentSection').classList.remove('visible');
+  document.getElementById('confirmBanner').classList.remove('visible');
+
+  Object.keys(lastOrderItems).forEach(id => {
+    cart[id] = lastOrderItems[id];
+    const qtyEl = document.getElementById('qty-' + id);
+    const cardEl = document.getElementById('card-' + id);
+    if(qtyEl) qtyEl.textContent = lastOrderItems[id];
+    if(cardEl) cardEl.classList.add('in-cart');
+  });
+  applyStockToUI();
+  updateCart();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function closePaymentSection(){
   document.getElementById('paymentSection').classList.remove('visible');
 }
 
+// Se usa solo para la limpieza final después de una compra ya pagada
+// (closeThankYou) — acá NO hay que restaurar el carrito, porque ese pedido ya
+// se pagó y no debería volver a aparecer para comprarlo de nuevo.
 function closeDeliverySection(){
   document.getElementById('deliverySection').classList.remove('visible');
 }
@@ -1909,7 +1933,7 @@ async function checkAndShowResult(){
   document.getElementById('paymentSection').scrollTo({ top: 0, behavior: 'smooth' });
 
   if(!lastOrderId){
-    if(statusEl) statusEl.textContent = 'No pudimos verificar el estado del pago automáticamente. Si ya pagaste, esperá un momento — si no, podés volver a intentar con el botón de arriba.';
+    if(statusEl) statusEl.textContent = 'No pudimos verificar el estado del pago automáticamente. Si ya pagaste, espera un momento — si no, puedes volver a intentar con el botón de arriba.';
     return;
   }
 
@@ -1935,7 +1959,7 @@ async function checkAndShowResult(){
   // así no perdés la venta en silencio.
   if(statusEl){
     const whatsappMsg = encodeURIComponent(`Hola! Intenté pagar mi pedido de 21 11 Sour pero no me llegó la confirmación.\n\n${getFullOrderText()}`);
-    statusEl.innerHTML = '⏳ Todavía no vemos la confirmación de tu pago. Si ya pagaste, puede tardar unos segundos más — <button onclick="checkAndShowResult()" style="background:none;border:none;color:var(--frambuesa);font-weight:700;text-decoration:underline;cursor:pointer;padding:0;font-family:inherit;font-size:inherit;">tocá acá para revisar de nuevo</button>. Si no llegaste a pagar o se canceló, podés volver a intentarlo con el botón de arriba, o escribinos directo: <a href="https://wa.me/' + OWNER_WHATSAPP + '?text=' + whatsappMsg + '" target="_blank" style="color:#1a7a4c;font-weight:700;">avisanos por WhatsApp →</a>';
+    statusEl.innerHTML = '⏳ Todavía no vemos la confirmación de tu pago. Si ya pagaste, puede tardar unos segundos más — <button onclick="checkAndShowResult()" style="background:none;border:none;color:var(--frambuesa);font-weight:700;text-decoration:underline;cursor:pointer;padding:0;font-family:inherit;font-size:inherit;">toca aquí para revisar de nuevo</button>. Si no llegaste a pagar o se canceló, puedes volver a intentarlo con el botón de arriba, o escríbenos directo: <a href="https://wa.me/' + OWNER_WHATSAPP + '?text=' + whatsappMsg + '" target="_blank" style="color:#1a7a4c;font-weight:700;">avísanos por WhatsApp →</a>';
   }
 }
 
@@ -1963,7 +1987,7 @@ if(window.location.hash === '#gracias'){
   if(barEl) barEl.classList.add('visible');
   if(statusEl){
     const whatsappMsg = encodeURIComponent(`Hola! Mi pago de 21 11 Sour no se pudo completar.\n\n${lastOrderResumen || ''}`);
-    statusEl.innerHTML = '❌ El pago no se pudo completar. Podés volver a intentarlo con el botón de arriba, o escribinos: <a href="https://wa.me/' + OWNER_WHATSAPP + '?text=' + whatsappMsg + '" target="_blank" style="color:#1a7a4c;font-weight:700;">avisanos por WhatsApp →</a>';
+    statusEl.innerHTML = '❌ El pago no se pudo completar. Puedes volver a intentarlo con el botón de arriba, o escríbenos: <a href="https://wa.me/' + OWNER_WHATSAPP + '?text=' + whatsappMsg + '" target="_blank" style="color:#1a7a4c;font-weight:700;">avísanos por WhatsApp →</a>';
   }
 } else if(window.location.hash === '#pendiente'){
   document.getElementById('deliverySection').classList.remove('visible');

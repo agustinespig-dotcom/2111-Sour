@@ -1061,6 +1061,10 @@ const flavors = {
   zero:      { color: 'var(--zero)',      label: 'Clásico Zero' },
 };
 
+// Los precios de acá abajo son solo un FALLBACK: se usan un instante, mientras
+// carga la Sheet, y apenas llega la respuesta real se pisan con lo que digan
+// las columnas "Precio" y la hoja "Promos". Para cambiar precios de verdad,
+// editá la Sheet — no hace falta tocar este archivo nunca más.
 const products = [
   { id: 'clasico-1L',   flavor: 'clasico',   vol: '1L',    price: 14000 },
   { id: 'berries-1L',   flavor: 'berries',   vol: '1L',    price: 16000 },
@@ -1071,6 +1075,15 @@ const products = [
   { id: 'frambuesa-475',flavor: 'frambuesa', vol: '475ml', price: 8500 },
   { id: 'zero-475',     flavor: 'zero',      vol: '475ml', price: 8000 },
 ];
+
+// Mismo criterio: promos de fallback, se pisan con la hoja "Promos" apenas carga.
+const DEFAULT_PROMOS = [
+  { etiqueta: 'Promo 1L',            campo: 'vol', valor: '1L',          cada: 2, tipo: 'descuento',   monto: 2000 },
+  { etiqueta: 'Promo Berries 475ml', campo: 'id',  valor: 'berries-475', cada: 2, tipo: 'precio_pack', monto: 15000 },
+];
+let priceData = {};
+products.forEach(p => priceData[p.id] = p.price);
+let promosData = DEFAULT_PROMOS;
 
 const STOCK_API_URL = 'https://script.google.com/macros/s/AKfycbyuHVH05FHc5dBuW6G-PG7gs43m9To4i3_k_t6pKQvWoNBs0Ao4X0VEQfnbrIY1EQbG/exec';
 const OWNER_WHATSAPP = '56977690321'; // tu número, sin + ni espacios
@@ -1109,10 +1122,20 @@ async function loadStock(){
     const res = await fetch(STOCK_API_URL, { cache: 'no-store' });
     const data = await res.json();
     stockData = data.stock || data; // 'data' a secas es compatibilidad con una versión vieja del script
+
+    // Precios y promos reales de la Sheet. Si la hoja "Promos" existe pero está
+    // vacía (todas las filas sin "x" en Activo), respetamos eso: cero promos.
+    // Si la respuesta ni siquiera trae la clave "promos" (versión vieja del
+    // script sin actualizar), seguimos con las promos de fallback.
+    if(data.prices) priceData = { ...priceData, ...data.prices };
+    if(Array.isArray(data.promos)) promosData = data.promos;
+
     deliveryAvailability = data.delivery || null;
     stockLoaded = true;
+    renderCatalog(); // recrea las tarjetas con los precios/promos reales
     applyStockToUI();
     applyDeliveryAvailabilityToUI();
+    updateCart(); // por si ya había cosas en el carrito, recalcula con precios reales
   } catch(err){
     console.error('No se pudo cargar el stock', err);
     // Si falla, dejamos comprar igual (el chequeo real ocurre al confirmar)
@@ -1201,44 +1224,60 @@ function bottleSVG(color){
 }
 
 // ---------- RENDER CATALOG ----------
+// Arma la etiqueta corta ("2x -$2.000", "2x $15.000", etc.) para la promo que
+// aplique a este producto, leyendo promosData en vez de tenerla escrita a mano.
+function promoTagForProduct(p){
+  const promo = promosData.find(pr =>
+    (pr.campo === 'vol' && pr.valor === p.vol) ||
+    (pr.campo === 'id' && pr.valor === p.id)
+  );
+  if(!promo || !promo.cada) return '';
+  const valorTxt = promo.tipo === 'precio_pack' ? `$${money(promo.monto)}` : `-$${money(promo.monto)}`;
+  return `<div class="promo-tag">${promo.cada}x ${valorTxt}</div>`;
+}
+
 const catalog = document.getElementById('catalog');
-products.forEach(p => {
-  const f = flavors[p.flavor];
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.id = 'card-' + p.id;
-  card.style.setProperty('--flavor', f.color);
 
-  let promoTag = '';
-  if(p.vol === '1L') promoTag = '<div class="promo-tag">2x -$2.000</div>';
-  if(p.id === 'berries-475') promoTag = '<div class="promo-tag">2x $15.000</div>';
+function renderCatalog(){
+  catalog.innerHTML = '';
+  products.forEach(p => {
+    const f = flavors[p.flavor];
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.id = 'card-' + p.id;
+    card.style.setProperty('--flavor', f.color);
 
-  const bottleVisual = p.flavor === 'clasico'
-    ? `<img src="clasico.jpg" alt="Botella ${f.label} ${p.vol}" class="card-photo">`
-    : bottleSVG(f.color);
+    const price = priceData[p.id] !== undefined ? priceData[p.id] : p.price;
+    const bottleVisual = p.flavor === 'clasico'
+      ? `<img src="clasico.jpg" alt="Botella ${f.label} ${p.vol}" class="card-photo">`
+      : bottleSVG(f.color);
 
-  card.innerHTML = `
-    ${promoTag}
-    <div class="bottle-row">
-      ${bottleVisual}
-      <span class="vol">${p.vol}</span>
-    </div>
-    <div>
-      <h3>${f.label}</h3>
-      <div class="flavor-tag">21 11 · Sour</div>
-      <div class="stock-badge" id="stock-${p.id}"></div>
-    </div>
-    <div class="price-row">
-      <span class="price">$${money(p.price)}</span>
-      <div class="stepper">
-        <button onclick="changeQty('${p.id}', -1)">−</button>
-        <span class="qty" id="qty-${p.id}">0</span>
-        <button onclick="changeQty('${p.id}', 1)">+</button>
+    card.innerHTML = `
+      ${promoTagForProduct(p)}
+      <div class="bottle-row">
+        ${bottleVisual}
+        <span class="vol">${p.vol}</span>
       </div>
-    </div>
-  `;
-  catalog.appendChild(card);
-});
+      <div>
+        <h3>${f.label}</h3>
+        <div class="flavor-tag">21 11 · Sour</div>
+        <div class="stock-badge" id="stock-${p.id}"></div>
+      </div>
+      <div class="price-row">
+        <span class="price">$${money(price)}</span>
+        <div class="stepper">
+          <button onclick="changeQty('${p.id}', -1)">−</button>
+          <span class="qty" id="qty-${p.id}">${cart[p.id] || 0}</span>
+          <button onclick="changeQty('${p.id}', 1)">+</button>
+        </div>
+      </div>
+    `;
+    if(cart[p.id] > 0) card.classList.add('in-cart');
+    catalog.appendChild(card);
+  });
+}
+
+renderCatalog();
 
 function changeQty(id, delta){
   const current = cart[id] || 0;
@@ -1253,35 +1292,52 @@ function changeQty(id, delta){
 }
 
 // ---------- PROMO LOGIC ----------
+// Genérico: lee promosData (viene de la hoja "Promos") en vez de tener las
+// reglas escritas a mano, así una promo nueva en la Sheet aparece sola acá.
 function computeOrder(){
   const items = Object.entries(cart).map(([id, qty]) => {
     const p = products.find(x => x.id === id);
-    return { ...p, qty, lineTotal: p.price * qty };
+    const price = priceData[id] !== undefined ? priceData[id] : p.price;
+    return { ...p, price, qty, lineTotal: price * qty };
   });
 
   let subtotal = items.reduce((s, i) => s + i.lineTotal, 0);
   let discount = 0;
   const promoLines = [];
 
-  // Promo 1: any two 1L bottles -> -$2000 per pair
-  const oneLQty = items.filter(i => i.vol === '1L').reduce((s, i) => s + i.qty, 0);
-  const oneLPairs = Math.floor(oneLQty / 2);
-  if(oneLPairs > 0){
-    const d = oneLPairs * 2000;
-    discount += d;
-    promoLines.push({ label: `Promo 1L (${oneLPairs}x -$2.000)`, amount: d });
-  }
+  // Expandimos el pedido en unidades individuales (con su precio) para poder
+  // agrupar de a "cada cuántas" y aplicar la promo sobre las más caras primero.
+  const units = [];
+  items.forEach(i => {
+    for(let n = 0; n < i.qty; n++) units.push({ id: i.id, vol: i.vol, price: i.price });
+  });
 
-  // Promo 2: Berries 475ml -> 2x $15.000 (save 2000 per pair vs 8500x2=17000)
-  const berries475 = items.find(i => i.id === 'berries-475');
-  if(berries475){
-    const pairs = Math.floor(berries475.qty / 2);
-    if(pairs > 0){
-      const d = pairs * 2000;
+  promosData.forEach(promo => {
+    if(!promo.cada || promo.cada <= 0) return;
+    const matching = units
+      .filter(u => (promo.campo === 'vol' && u.vol === promo.valor) || (promo.campo === 'id' && u.id === promo.valor))
+      .sort((a, b) => b.price - a.price);
+    const groups = Math.floor(matching.length / promo.cada);
+    if(groups <= 0) return;
+
+    if(promo.tipo === 'descuento'){
+      const d = groups * promo.monto;
       discount += d;
-      promoLines.push({ label: `Promo Berries 475ml (${pairs}x 2x$15.000)`, amount: d });
+      promoLines.push({ label: `${promo.etiqueta} (${groups}x -$${money(promo.monto)})`, amount: d });
+    } else if(promo.tipo === 'precio_pack'){
+      let d = 0;
+      for(let g = 0; g < groups; g++){
+        const chunk = matching.slice(g * promo.cada, (g + 1) * promo.cada);
+        const chunkSum = chunk.reduce((s, u) => s + u.price, 0);
+        const packDiscount = chunkSum - promo.monto;
+        if(packDiscount > 0) d += packDiscount;
+      }
+      if(d > 0){
+        discount += d;
+        promoLines.push({ label: `${promo.etiqueta} (${groups}x ${promo.cada}x$${money(promo.monto)})`, amount: d });
+      }
     }
-  }
+  });
 
   const total = subtotal - discount;
   return { items, subtotal, discount, promoLines, total };
@@ -1539,6 +1595,14 @@ async function goToMercadoPago(){
     const data = await res.json();
 
     if(data.success && data.init_point){
+      // El monto real es el que calculó el servidor con los precios/promos
+      // vigentes en la Sheet en este mismo instante (puede diferir un poco del
+      // que se veía en pantalla si justo cambiaste un precio recién).
+      if(typeof data.total === 'number'){
+        lastOrderTotal = data.total;
+        const mpAmountEl = document.getElementById('mpAmount');
+        if(mpAmountEl) mpAmountEl.textContent = '$' + money(data.total);
+      }
       awaitingReturnFromPay = true;
       document.getElementById('payNotifyStatus').textContent = '✅ Te abrimos Mercado Pago en otra pestaña, con el monto ya cargado — no tenés que escribir nada. Cuando termines de pagar y vuelvas acá, te mostramos la confirmación sola.';
       document.getElementById('payNotifyBar').classList.add('sent');

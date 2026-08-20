@@ -27,7 +27,7 @@
     color: var(--ink);
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
-    padding-bottom: 90px; /* room for cart bar */
+    padding-bottom: 40px; /* espacio suelto, el carrito ahora flota en la esquina */
   }
   a{color:inherit;}
 
@@ -440,22 +440,28 @@
     letter-spacing: 0.05em;
   }
 
-  /* ---------- CART BAR ---------- */
+  /* ---------- CART BAR (tarjeta flotante, esquina inferior derecha) ---------- */
   .cart-bar{
     position: fixed;
-    left: 0; right: 0; bottom: 0;
+    right: 20px; bottom: 20px;
     background: var(--bg-deep);
-    border-top: 1px solid var(--line);
-    padding: 12px 20px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 12px 16px;
     display:flex;
     align-items:center;
-    justify-content:space-between;
-    gap: 12px;
+    gap: 14px;
     z-index: 40;
-    transform: translateY(100%);
-    transition: transform .25s ease;
+    box-shadow: 0 14px 32px -12px rgba(23,57,46,0.4);
+    transform: translateY(16px) scale(0.94);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .22s ease, opacity .22s ease;
   }
-  .cart-bar.visible{ transform: translateY(0); }
+  .cart-bar.visible{ transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
+  @media (max-width: 480px){
+    .cart-bar{ right: 12px; bottom: 12px; left: 12px; justify-content: space-between; }
+  }
   .cart-bar .info{
     display:flex;
     flex-direction:column;
@@ -486,6 +492,44 @@
     border-radius: 10px;
     padding: 12px 20px;
     cursor:pointer;
+  }
+
+  /* ---------- BOTÓN FLOTANTE DE WHATSAPP (esquina inferior izquierda) ---------- */
+  .whatsapp-fab{
+    position: fixed;
+    left: 20px; bottom: 20px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #1a7a4c;
+    color: #fff;
+    text-decoration: none;
+    padding: 8px 16px 8px 8px;
+    border-radius: 30px;
+    box-shadow: 0 14px 32px -12px rgba(23,57,46,0.4);
+    transition: transform .15s ease;
+  }
+  .whatsapp-fab:hover{ transform: translateY(-2px); }
+  .whatsapp-fab-icon{
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    flex-shrink: 0;
+  }
+  .whatsapp-fab-text{
+    font-family: var(--font-body);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  @media (max-width: 480px){
+    .whatsapp-fab{ left: 12px; bottom: 12px; padding-right: 8px; }
+    .whatsapp-fab-text{ display: none; } /* en pantallas chicas dejamos solo el círculo, para no chocar con el carrito */
   }
 
   /* ---------- CART DRAWER ---------- */
@@ -1026,6 +1070,12 @@
   </div>
   <button class="open-cart" onclick="openDrawer()">Ver carrito →</button>
 </div>
+
+<!-- BOTÓN FLOTANTE DE WHATSAPP -->
+<a class="whatsapp-fab" id="whatsappFab" href="#" target="_blank" rel="noopener">
+  <span class="whatsapp-fab-icon">💬</span>
+  <span class="whatsapp-fab-text">¿Tenés dudas?<br>Hablá conmigo</span>
+</a>
 
 <!-- OVERLAY + DRAWER -->
 <div class="overlay" id="overlay" onclick="closeDrawer()"></div>
@@ -1674,6 +1724,13 @@ function copyText(text, btn){
 updateCart();
 loadStock();
 
+// Botón flotante de WhatsApp — usa el mismo número configurado en OWNER_WHATSAPP.
+const whatsappFabEl = document.getElementById('whatsappFab');
+if(whatsappFabEl){
+  const fabMsg = encodeURIComponent('Hola! Tengo una duda sobre 21 11 Sour.');
+  whatsappFabEl.href = `https://wa.me/${OWNER_WHATSAPP}?text=${fabMsg}`;
+}
+
 // Cuando el cliente vuelve a esta pestaña después de haber tocado "Pagar
 // ahora", NUNCA asumimos que pagó solo porque volvió — eso rompía el flujo
 // cuando el pago fallaba o se cancelaba y igual mostraba "gracias". En vez de
@@ -1681,10 +1738,15 @@ loadStock();
 // puntual (leyendo 'PedidosPendientes'), con un par de reintentos por si el
 // webhook de Mercado Pago todavía no terminó de procesar el pago.
 async function checkAndShowResult(){
+  // Nos aseguramos de que la ventana de pago esté a la vista — si el cliente
+  // volvió a esta pestaña scrolleado a otro lado, el aviso no le sirve de
+  // nada si no lo ve.
+  document.getElementById('paymentSection').classList.add('visible');
   const statusEl = document.getElementById('payNotifyStatus');
   const barEl = document.getElementById('payNotifyBar');
   if(barEl){ barEl.classList.add('visible'); barEl.classList.remove('sent'); }
   if(statusEl) statusEl.textContent = 'Verificando si tu pago ya se confirmó...';
+  document.getElementById('paymentSection').scrollTo({ top: 0, behavior: 'smooth' });
 
   if(!lastOrderId){
     if(statusEl) statusEl.textContent = 'No pudimos verificar el estado del pago automáticamente. Si ya pagaste, esperá un momento — si no, podés volver a intentar con el botón de arriba.';
@@ -1708,9 +1770,12 @@ async function checkAndShowResult(){
 
   // Después de varios intentos seguimos sin ver el pago confirmado — puede
   // ser que todavía esté procesándose, que lo haya cancelado, o que nunca
-  // haya llegado a pagar. No le decimos "gracias" en ninguno de esos casos.
+  // haya llegado a pagar. No le decimos "gracias" en ninguno de esos casos,
+  // y le dejamos un camino directo para que te contacte si necesita ayuda —
+  // así no perdés la venta en silencio.
   if(statusEl){
-    statusEl.innerHTML = '⏳ Todavía no vemos la confirmación de tu pago. Si ya pagaste, puede tardar unos segundos más — <button onclick="checkAndShowResult()" style="background:none;border:none;color:var(--frambuesa);font-weight:700;text-decoration:underline;cursor:pointer;padding:0;font-family:inherit;font-size:inherit;">tocá acá para revisar de nuevo</button>. Si no llegaste a pagar o se canceló, podés volver a intentarlo con el botón de arriba.';
+    const whatsappMsg = encodeURIComponent(`Hola! Intenté pagar mi pedido de 21 11 Sour pero no me llegó la confirmación.\n\n${getFullOrderText()}`);
+    statusEl.innerHTML = '⏳ Todavía no vemos la confirmación de tu pago. Si ya pagaste, puede tardar unos segundos más — <button onclick="checkAndShowResult()" style="background:none;border:none;color:var(--frambuesa);font-weight:700;text-decoration:underline;cursor:pointer;padding:0;font-family:inherit;font-size:inherit;">tocá acá para revisar de nuevo</button>. Si no llegaste a pagar o se canceló, podés volver a intentarlo con el botón de arriba, o escribinos directo: <a href="https://wa.me/' + OWNER_WHATSAPP + '?text=' + whatsappMsg + '" target="_blank" style="color:#1a7a4c;font-weight:700;">avisanos por WhatsApp →</a>';
   }
 }
 
@@ -1736,7 +1801,10 @@ if(window.location.hash === '#gracias'){
   const statusEl = document.getElementById('payNotifyStatus');
   const barEl = document.getElementById('payNotifyBar');
   if(barEl) barEl.classList.add('visible');
-  if(statusEl) statusEl.textContent = '❌ El pago no se pudo completar. Podés volver a intentarlo con el botón de arriba.';
+  if(statusEl){
+    const whatsappMsg = encodeURIComponent(`Hola! Mi pago de 21 11 Sour no se pudo completar.\n\n${lastOrderResumen || ''}`);
+    statusEl.innerHTML = '❌ El pago no se pudo completar. Podés volver a intentarlo con el botón de arriba, o escribinos: <a href="https://wa.me/' + OWNER_WHATSAPP + '?text=' + whatsappMsg + '" target="_blank" style="color:#1a7a4c;font-weight:700;">avisanos por WhatsApp →</a>';
+  }
 } else if(window.location.hash === '#pendiente'){
   document.getElementById('deliverySection').classList.remove('visible');
   document.getElementById('paymentSection').classList.add('visible');

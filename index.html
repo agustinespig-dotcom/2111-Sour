@@ -29,6 +29,9 @@
     -webkit-font-smoothing: antialiased;
     padding-bottom: 40px; /* espacio suelto, el carrito ahora flota en la esquina */
   }
+  @media (max-width: 600px){
+    body{ padding-bottom: 100px; } /* en mobile un poco más, para que el carrito/WhatsApp no tapen el final de la página */
+  }
   a{color:inherit;}
 
   /* ---------- HERO ---------- */
@@ -178,7 +181,6 @@
       grid-template-columns: repeat(2, 1fr);
       gap: 10px;
       padding: 0 14px 8px;
-      margin-bottom: 90px; /* espacio para que la última fila no quede tapada por el carrito/WhatsApp flotantes */
     }
     .card{ padding: 14px 12px 12px; gap: 10px; }
     .card h3{ font-size: 15px; }
@@ -203,6 +205,7 @@
     gap: 14px;
     transition: border-color .2s ease, transform .2s ease;
     position: relative;
+    min-width: 0; /* clave: sin esto, la tarjeta no se achica al ancho de su columna y desborda a la derecha en pantallas chicas */
   }
   .card:hover{
     border-color: var(--flavor, var(--clasico));

@@ -96,8 +96,7 @@
   .hero-photo img{
     width: 100%;
     display:block;
-    border-radius: 18px;
-    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.55);
+    filter: drop-shadow(0 20px 34px rgba(23,57,46,0.22));
   }
 
   /* ---------- RAMAS DE LIMONERO (detalle decorativo) ---------- */
@@ -935,7 +934,7 @@
       <p class="sub">Clásico, Berries, Frambuesa y Zero. Cóctel sour listo para tomar, en botella de 1L o 475ml — la coctelería con la que el reloj marca las 21:11.</p>
     </div>
     <div class="hero-photo">
-      <img src="clasico.jpg" alt="Botella 21 11 Sour Clásico, rodeada de limones">
+      <img src="limonero.png" alt="Limonero 21 11, con limones amarillos">
     </div>
   </div>
 </section>
@@ -1248,9 +1247,9 @@ function renderCatalog(){
     card.style.setProperty('--flavor', f.color);
 
     const price = priceData[p.id] !== undefined ? priceData[p.id] : p.price;
-    const bottleVisual = p.flavor === 'clasico'
-      ? `<img src="clasico.jpg" alt="Botella ${f.label} ${p.vol}" class="card-photo">`
-      : bottleSVG(f.color);
+    // Por ahora no hay fotos reales de las botellas — las 4 usan el mismo
+    // placeholder dibujado (bottleSVG). Cuando tengas fotos, avisame.
+    const bottleVisual = bottleSVG(f.color);
 
     card.innerHTML = `
       ${promoTagForProduct(p)}
@@ -1669,21 +1668,12 @@ function copyText(text, btn){
 }
 
 // ---------- RAMAS DE LIMONERO (detalle decorativo, sutil, en las esquinas) ----------
-const LEMON_BRANCH_SVG = `<svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
-  <path d="M155 5 C 120 20, 90 45, 65 80 C 50 100, 40 120, 20 155" stroke="var(--ink)" stroke-width="2.5" fill="none" opacity="0.4"/>
-  <ellipse cx="95" cy="38" rx="16" ry="8" fill="var(--ink)" opacity="0.22" transform="rotate(35 95 38)"/>
-  <ellipse cx="70" cy="68" rx="18" ry="9" fill="var(--ink)" opacity="0.22" transform="rotate(-20 70 68)"/>
-  <ellipse cx="45" cy="105" rx="16" ry="8" fill="var(--ink)" opacity="0.22" transform="rotate(40 45 105)"/>
-  <circle cx="108" cy="55" r="11" fill="var(--clasico)" opacity="0.45"/>
-  <circle cx="55" cy="92" r="13" fill="var(--clasico)" opacity="0.45"/>
-  <circle cx="30" cy="130" r="10" fill="var(--clasico)" opacity="0.45"/>
-</svg>`;
-
+// Usa el archivo logo-arbol.png subido al repo (mismo lugar que index.html).
 function addLemonDecor(container, position, fixed){
   if(!container) return;
   const wrap = document.createElement('div');
   wrap.className = 'lemon-decor lemon-decor--' + position + (fixed ? ' fixed' : '');
-  wrap.innerHTML = LEMON_BRANCH_SVG;
+  wrap.innerHTML = '<img src="logo-arbol.png" alt="" style="width:100%;height:100%;object-fit:contain;">';
   container.appendChild(wrap);
 }
 

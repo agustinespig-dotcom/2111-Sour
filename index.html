@@ -1550,6 +1550,7 @@ function getFullOrderText(){
 }
 
 let lastOrderItems = {}; // id -> qty del último pedido armado, se manda al servidor recién al tocar "Pagar ahora"
+let lastOrderId = null; // ID del pedido en 'PedidosPendientes', para poder verificar su estado real después
 let awaitingReturnFromPay = false; // true justo después de tocar "Pagar ahora", hasta que volvés a esta pestaña
 
 // Le pide al Apps Script que genere un link de pago de Mercado Pago con el
@@ -1596,6 +1597,7 @@ async function goToMercadoPago(){
         if(mpAmountEl) mpAmountEl.textContent = '$' + money(data.total);
       }
       awaitingReturnFromPay = true;
+      lastOrderId = data.orderId || null;
       document.getElementById('payNotifyStatus').textContent = '✅ Te abrimos Mercado Pago en otra pestaña, con el monto ya cargado — no tenés que escribir nada. Cuando termines de pagar y vuelvas acá, te mostramos la confirmación sola.';
       document.getElementById('payNotifyBar').classList.add('sent');
       if(payWindow){
@@ -1672,25 +1674,76 @@ function copyText(text, btn){
 updateCart();
 loadStock();
 
-// Cuando volvés a esta pestaña después de haber tocado "Pagar ahora" (por ej.
-// después de pagar en la pestaña de Mercado Pago y cerrarla o volver acá),
-// mostramos la confirmación solos, sin que haya que buscar el botón.
+// Cuando el cliente vuelve a esta pestaña después de haber tocado "Pagar
+// ahora", NUNCA asumimos que pagó solo porque volvió — eso rompía el flujo
+// cuando el pago fallaba o se cancelaba y igual mostraba "gracias". En vez de
+// eso, le preguntamos al servidor cuál es el estado REAL de ese pedido
+// puntual (leyendo 'PedidosPendientes'), con un par de reintentos por si el
+// webhook de Mercado Pago todavía no terminó de procesar el pago.
+async function checkAndShowResult(){
+  const statusEl = document.getElementById('payNotifyStatus');
+  const barEl = document.getElementById('payNotifyBar');
+  if(barEl){ barEl.classList.add('visible'); barEl.classList.remove('sent'); }
+  if(statusEl) statusEl.textContent = 'Verificando si tu pago ya se confirmó...';
+
+  if(!lastOrderId){
+    if(statusEl) statusEl.textContent = 'No pudimos verificar el estado del pago automáticamente. Si ya pagaste, esperá un momento — si no, podés volver a intentar con el botón de arriba.';
+    return;
+  }
+
+  for(let intento = 0; intento < 5; intento++){
+    try{
+      const res = await fetch(STOCK_API_URL + '?type=check_order&orderId=' + encodeURIComponent(lastOrderId), { cache: 'no-store' });
+      const data = await res.json();
+      if(data.found && data.status === 'pagado'){
+        if(barEl) barEl.classList.add('sent');
+        showThankYou();
+        return;
+      }
+    } catch(err){
+      // seguimos intentando en la próxima vuelta
+    }
+    if(intento < 4) await new Promise(r => setTimeout(r, 2000));
+  }
+
+  // Después de varios intentos seguimos sin ver el pago confirmado — puede
+  // ser que todavía esté procesándose, que lo haya cancelado, o que nunca
+  // haya llegado a pagar. No le decimos "gracias" en ninguno de esos casos.
+  if(statusEl){
+    statusEl.innerHTML = '⏳ Todavía no vemos la confirmación de tu pago. Si ya pagaste, puede tardar unos segundos más — <button onclick="checkAndShowResult()" style="background:none;border:none;color:var(--frambuesa);font-weight:700;text-decoration:underline;cursor:pointer;padding:0;font-family:inherit;font-size:inherit;">tocá acá para revisar de nuevo</button>. Si no llegaste a pagar o se canceló, podés volver a intentarlo con el botón de arriba.';
+  }
+}
+
 document.addEventListener('visibilitychange', () => {
   if(document.visibilityState === 'visible' && awaitingReturnFromPay){
     awaitingReturnFromPay = false;
-    setTimeout(() => {
-      if(lastOrderResumen) showThankYou();
-    }, 400);
+    setTimeout(checkAndShowResult, 400);
   }
 });
 
-// Link fijo para usar como "URL de redirección" el día que armes un link de
-// Mercado Pago con monto fijo (esos sí soportan redirección automática).
-// Ejemplo, una vez subido a GitHub Pages: https://tu-usuario.github.io/2111-spours/#gracias
+// Mercado Pago redirige acá mismo con distintos hashes según cómo terminó el
+// pago (esto pasa sobre todo si el pago se completa en la MISMA pestaña, en
+// vez de una pestaña aparte). '#gracias' solo lo manda Mercado Pago cuando el
+// pago quedó realmente aprobado (auto_return: 'approved'), así que ahí sí
+// confiamos directamente sin tener que volver a preguntar.
 if(window.location.hash === '#gracias'){
   document.getElementById('thankYouTitle').textContent = '¡Gracias por tu compra! 🎉';
   document.getElementById('thankYouSummary').textContent = lastOrderResumen || 'Ya recibimos la notificación de tu pago. Te vamos a contactar para coordinar la entrega.';
   document.getElementById('thankYouOverlay').classList.add('visible');
+} else if(window.location.hash === '#error'){
+  document.getElementById('deliverySection').classList.remove('visible');
+  document.getElementById('paymentSection').classList.add('visible');
+  const statusEl = document.getElementById('payNotifyStatus');
+  const barEl = document.getElementById('payNotifyBar');
+  if(barEl) barEl.classList.add('visible');
+  if(statusEl) statusEl.textContent = '❌ El pago no se pudo completar. Podés volver a intentarlo con el botón de arriba.';
+} else if(window.location.hash === '#pendiente'){
+  document.getElementById('deliverySection').classList.remove('visible');
+  document.getElementById('paymentSection').classList.add('visible');
+  const statusEl = document.getElementById('payNotifyStatus');
+  const barEl = document.getElementById('payNotifyBar');
+  if(barEl) barEl.classList.add('visible');
+  if(statusEl) statusEl.textContent = '⏳ Tu pago quedó pendiente de confirmación (por ejemplo, transferencia en proceso). Te vamos a avisar apenas se confirme.';
 }
 </script>
 

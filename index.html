@@ -460,7 +460,9 @@
   }
   .cart-bar.visible{ transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
   @media (max-width: 480px){
-    .cart-bar{ right: 12px; bottom: 12px; left: 12px; justify-content: space-between; }
+    .cart-bar{ right: 12px; bottom: 12px; padding: 10px 12px; gap: 10px; }
+    .cart-bar .count{ display: none; } /* en pantallas chicas priorizamos que quepa sin invadir la esquina izquierda */
+    .cart-bar button.open-cart{ padding: 10px 14px; font-size: 13px; }
   }
   .cart-bar .info{
     display:flex;

@@ -1145,16 +1145,17 @@ const products = [
   { id: 'berries-1L',   flavor: 'berries',   vol: '1L',    price: 16000 },
   { id: 'frambuesa-1L', flavor: 'frambuesa', vol: '1L',    price: 16000 },
   { id: 'zero-1L',      flavor: 'zero',      vol: '1L',    price: 14000 },
-  { id: 'clasico-475',  flavor: 'clasico',   vol: '475ml', price: 8000 },
+  { id: 'clasico-475',  flavor: 'clasico',   vol: '475ml', price: 8500 },
   { id: 'berries-475',  flavor: 'berries',   vol: '475ml', price: 8500 },
   { id: 'frambuesa-475',flavor: 'frambuesa', vol: '475ml', price: 8500 },
-  { id: 'zero-475',     flavor: 'zero',      vol: '475ml', price: 8000 },
+  { id: 'zero-475',     flavor: 'zero',      vol: '475ml', price: 8500 },
 ];
 
 // Mismo criterio: promos de fallback, se pisan con la hoja "Promos" apenas carga.
 const DEFAULT_PROMOS = [
-  { etiqueta: 'Promo 1L',            campo: 'vol', valor: '1L',          cada: 2, tipo: 'descuento',   monto: 2000 },
-  { etiqueta: 'Promo Berries 475ml', campo: 'id',  valor: 'berries-475', cada: 2, tipo: 'precio_pack', monto: 15000 },
+  { etiqueta: '2x Clásico/Zero 1L',      campo: 'id',  valor: 'clasico-1L,zero-1L',     campo2: '',   valor2: '',       cada: 2, tipo: 'precio_pack', monto: 26000 },
+  { etiqueta: '2x Berries/Frambuesa 1L', campo: 'id',  valor: 'berries-1L,frambuesa-1L', campo2: '',   valor2: '',       cada: 2, tipo: 'precio_pack', monto: 30000 },
+  { etiqueta: 'Combo 1L + 475ml',        campo: 'vol', valor: '1L',                      campo2: 'vol', valor2: '475ml', cada: 1, tipo: 'combo_precio', monto: 22000 },
 ];
 let priceData = {};
 products.forEach(p => priceData[p.id] = p.price);
@@ -1300,12 +1301,36 @@ function bottleSVG(color){
 }
 
 // ---------- RENDER CATALOG ----------
-// Arma la etiqueta corta ("2x -$2.000", "2x $15.000", etc.) para la promo que
-// aplique a este producto, leyendo promosData en vez de tenerla escrita a mano.
+// ¿Esta unidad (id + vol) pertenece al grupo definido por "campo"/"valor"?
+// "Valor" puede traer varias opciones separadas por coma (un "o" entre sabores/vols).
+function unitMatchesGroup(unit, campo, valor){
+  if(!campo || !valor) return false;
+  const opciones = String(valor).split(',').map(v => v.trim()).filter(Boolean);
+  if(campo === 'vol') return opciones.indexOf(unit.vol) > -1;
+  if(campo === 'id') return opciones.indexOf(unit.id) > -1;
+  return false;
+}
+
+// Texto lindo para un grupo (ej: "clasico-1L,zero-1L" -> "Clásico 1L o Clásico Zero 1L").
+function groupLabel(campo, valor){
+  if(!campo || !valor) return '';
+  const opciones = String(valor).split(',').map(v => v.trim()).filter(Boolean);
+  if(campo === 'id'){
+    return opciones.map(id => {
+      const prod = products.find(p => p.id === id);
+      return prod ? `${flavors[prod.flavor].label} ${prod.vol}` : id;
+    }).join(' o ');
+  }
+  return opciones.join(' o ');
+}
+
+// Arma la etiqueta corta ("2x $26.000") para el PACK que aplique a este
+// producto puntual — los combos cruzados (1L + 475ml) no aplican a un solo
+// producto, así que esos se muestran solo como chip arriba, no acá, para no
+// repetir el mismo aviso en las 8 tarjetas del catálogo.
 function promoTagForProduct(p){
   const promo = promosData.find(pr =>
-    (pr.campo === 'vol' && pr.valor === p.vol) ||
-    (pr.campo === 'id' && pr.valor === p.id)
+    pr.tipo !== 'combo_precio' && unitMatchesGroup(p, pr.campo, pr.valor)
   );
   if(!promo || !promo.cada) return '';
   const valorTxt = promo.tipo === 'precio_pack' ? `$${money(promo.monto)}` : `-$${money(promo.monto)}`;
@@ -1314,15 +1339,12 @@ function promoTagForProduct(p){
 
 const catalog = document.getElementById('catalog');
 
-// Arma el texto de un chip de promo a partir de lo que diga la hoja "Promos" —
-// si el "Aplica a" es un id puntual, buscamos el nombre lindo del producto
-// (ej: "Berries 475ml") en vez de mostrar el id crudo.
+// Arma el texto de un chip de promo a partir de lo que diga la hoja "Promos".
 function promoBannerLabel(promo){
-  let objetivo = promo.valor;
-  if(promo.campo === 'id'){
-    const prod = products.find(p => p.id === promo.valor);
-    if(prod) objetivo = `${flavors[prod.flavor].label} ${prod.vol}`;
+  if(promo.tipo === 'combo_precio'){
+    return `${promo.etiqueta}: <b>${groupLabel(promo.campo, promo.valor)} + ${groupLabel(promo.campo2, promo.valor2)} → $${money(promo.monto)}</b>`;
   }
+  const objetivo = groupLabel(promo.campo, promo.valor);
   if(promo.tipo === 'precio_pack'){
     return `${promo.etiqueta}: <b>${promo.cada}x $${money(promo.monto)}</b>`;
   }
@@ -1396,6 +1418,13 @@ function changeQty(id, delta){
 // ---------- PROMO LOGIC ----------
 // Genérico: lee promosData (viene de la hoja "Promos") en vez de tener las
 // reglas escritas a mano, así una promo nueva en la Sheet aparece sola acá.
+//
+// IMPORTANTE: las promos se procesan EN EL ORDEN de la hoja "Promos", y cada
+// botella se "consume" apenas entra en una promo, para que ninguna botella se
+// cuente dos veces en dos descuentos distintos (ej: un pack de 2x y un combo
+// cruzado compitiendo por la misma botella). Esta lógica tiene que ser IGUAL
+// a la del Apps Script (computeServerTotal) para que lo que ve el cliente acá
+// coincida con lo que finalmente se cobra.
 function computeOrder(){
   const items = Object.entries(cart).map(([id, qty]) => {
     const p = products.find(x => x.id === id);
@@ -1403,24 +1432,47 @@ function computeOrder(){
     return { ...p, price, qty, lineTotal: price * qty };
   });
 
-  let subtotal = items.reduce((s, i) => s + i.lineTotal, 0);
+  const subtotal = items.reduce((s, i) => s + i.lineTotal, 0);
   let discount = 0;
   const promoLines = [];
 
-  // Expandimos el pedido en unidades individuales (con su precio) para poder
-  // agrupar de a "cada cuántas" y aplicar la promo sobre las más caras primero.
-  const units = [];
+  let pool = [];
   items.forEach(i => {
-    for(let n = 0; n < i.qty; n++) units.push({ id: i.id, vol: i.vol, price: i.price });
+    for(let n = 0; n < i.qty; n++) pool.push({ id: i.id, vol: i.vol, price: i.price });
   });
 
   promosData.forEach(promo => {
+    if(promo.tipo === 'combo_precio'){
+      const candidatosA = pool.filter(u => unitMatchesGroup(u, promo.campo, promo.valor)).sort((a, b) => b.price - a.price);
+      const usadas = [];
+      let d = 0;
+      candidatosA.forEach(a => {
+        if(usadas.indexOf(a) > -1) return;
+        const b = pool
+          .filter(u => u !== a && usadas.indexOf(u) === -1 && unitMatchesGroup(u, promo.campo2, promo.valor2))
+          .sort((x, y) => y.price - x.price)[0];
+        if(!b) return;
+        const parSum = a.price + b.price;
+        const packDiscount = parSum - promo.monto;
+        if(packDiscount > 0) d += packDiscount;
+        usadas.push(a, b);
+      });
+      if(usadas.length > 0){
+        pool = pool.filter(u => usadas.indexOf(u) === -1);
+        discount += d;
+        promoLines.push({ label: `${promo.etiqueta} (${usadas.length / 2}x combo $${money(promo.monto)})`, amount: d });
+      }
+      return;
+    }
+
     if(!promo.cada || promo.cada <= 0) return;
-    const matching = units
-      .filter(u => (promo.campo === 'vol' && u.vol === promo.valor) || (promo.campo === 'id' && u.id === promo.valor))
+    const matching = pool
+      .filter(u => unitMatchesGroup(u, promo.campo, promo.valor))
       .sort((a, b) => b.price - a.price);
     const groups = Math.floor(matching.length / promo.cada);
     if(groups <= 0) return;
+    const consumidas = matching.slice(0, groups * promo.cada);
+    pool = pool.filter(u => consumidas.indexOf(u) === -1);
 
     if(promo.tipo === 'descuento'){
       const d = groups * promo.monto;
@@ -1429,7 +1481,7 @@ function computeOrder(){
     } else if(promo.tipo === 'precio_pack'){
       let d = 0;
       for(let g = 0; g < groups; g++){
-        const chunk = matching.slice(g * promo.cada, (g + 1) * promo.cada);
+        const chunk = consumidas.slice(g * promo.cada, (g + 1) * promo.cada);
         const chunkSum = chunk.reduce((s, u) => s + u.price, 0);
         const packDiscount = chunkSum - promo.monto;
         if(packDiscount > 0) d += packDiscount;

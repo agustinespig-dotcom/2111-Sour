@@ -1564,6 +1564,14 @@ async function goToMercadoPago(){
   document.getElementById('payNotifyBar').classList.remove('sent');
   document.getElementById('payNotifyStatus').textContent = 'Generando tu link de pago con el monto exacto...';
 
+  // IMPORTANTE: la pestaña se abre ACÁ, en el mismo instante del click, antes
+  // de esperar la respuesta del servidor. Safari (sobre todo en iPhone) solo
+  // permite abrir pestañas nuevas como reacción directa e inmediata a un click;
+  // si esperamos al fetch y recién ahí llamamos a window.open, Safari lo
+  // bloquea en silencio, sin avisar nada. Por eso abrimos una pestaña en
+  // blanco ya mismo, y más abajo la redirigimos al link real de pago.
+  const payWindow = window.open('', '_blank');
+
   try{
     const res = await fetch(STOCK_API_URL, {
       method: 'POST',
@@ -1590,11 +1598,19 @@ async function goToMercadoPago(){
       awaitingReturnFromPay = true;
       document.getElementById('payNotifyStatus').textContent = '✅ Te abrimos Mercado Pago en otra pestaña, con el monto ya cargado — no tenés que escribir nada. Cuando termines de pagar y vuelvas acá, te mostramos la confirmación sola.';
       document.getElementById('payNotifyBar').classList.add('sent');
-      window.open(data.init_point, '_blank');
+      if(payWindow){
+        payWindow.location.href = data.init_point;
+      } else {
+        // Si el navegador igual bloqueó la pestaña en blanco (raro, pero puede
+        // pasar con bloqueadores de popups muy agresivos), dejamos un link
+        // clickeable como respaldo para que el cliente no se quede trabado.
+        document.getElementById('payNotifyStatus').innerHTML = '⚠️ Tu navegador bloqueó la ventana emergente. <a href="' + data.init_point + '" target="_blank" style="color:var(--frambuesa);font-weight:700;">Tocá acá para pagar →</a>';
+      }
       btn.textContent = 'Pagar ahora →';
       btn.disabled = false;
     } else if(data.insufficient){
       // Alguien se llevó el stock justo mientras el cliente iba a pagar
+      if(payWindow) payWindow.close();
       if(data.stock){ stockData = data.stock; applyStockToUI(); }
       document.getElementById('payNotifyStatus').textContent = '⚠️ ' + (data.error || 'Nos quedamos sin stock de algo de tu pedido.') + ' Cerrá esta ventana y ajustá el carrito.';
       btn.textContent = 'Pagar ahora →';
@@ -1603,6 +1619,7 @@ async function goToMercadoPago(){
       throw new Error(data.error || 'fallo desconocido');
     }
   } catch(err){
+    if(payWindow) payWindow.close();
     document.getElementById('payNotifyStatus').textContent = 'No pudimos generar el link de pago 😕 — ' + (err.message || 'probá de nuevo en un rato.');
     btn.textContent = 'Pagar ahora →';
     btn.disabled = false;

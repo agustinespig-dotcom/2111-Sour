@@ -92,15 +92,12 @@
   @media (max-width: 760px){ .sub{ margin-left:auto; margin-right:auto; } }
   .hero-photo{
     position:relative;
-    display:flex;
-    align-items:center;
-    justify-content:center;
   }
   .hero-photo img{
     width: 100%;
-    max-width: 380px;
     display:block;
-    filter: drop-shadow(0 24px 30px rgba(0,0,0,0.16));
+    border-radius: 18px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.55);
   }
 
   /* ---------- RAMAS DE LIMONERO (detalle decorativo) ---------- */
@@ -938,7 +935,7 @@
       <p class="sub">Clásico, Berries, Frambuesa y Zero. Cóctel sour listo para tomar, en botella de 1L o 475ml — la coctelería con la que el reloj marca las 21:11.</p>
     </div>
     <div class="hero-photo">
-      <img src="logo-arbol.png" alt="Limonero 21 11 Sour, ilustración de marca">
+      <img src="clasico.jpg" alt="Botella 21 11 Sour Clásico, rodeada de limones">
     </div>
   </div>
 </section>
@@ -1006,18 +1003,16 @@
   <div class="pay-wrap pay-wrap-single">
     <div class="ticket" id="ticket-mp">
       <h3>Pagá con tu banco, Mercado Pago o transferencia</h3>
-      <p class="mp-instructions">Mercado Pago acepta todo: tarjeta, saldo en cuenta o transferencia bancaria, todo desde el mismo botón. Te va a pedir que ingreses el monto vos mismo — copialo acá y pegalo ahí:</p>
+      <p class="mp-instructions">Mercado Pago acepta todo: tarjeta, saldo en cuenta o transferencia bancaria, todo desde el mismo botón. El monto ya viene cargado automáticamente, no tenés que escribir nada:</p>
       <div class="row amount-row">
         <span class="label">Monto a pagar</span>
         <span class="value amount-value" id="mpAmount">$0</span>
-        <button class="copy-btn" id="mpAmountCopyBtn" onclick="copyText(String(lastOrderTotal), this)">Copiar</button>
       </div>
-      <a class="mp-btn" href="https://link.mercadopago.cl/sour2111" target="_blank" rel="noopener" onclick="selectPayMethod('mp')">Pagar ahora →</a>
+      <button class="mp-btn" id="mpPayBtn" onclick="goToMercadoPago()" style="width:100%; border:none;">Pagar ahora →</button>
 
-      <!-- Estado del aviso automático, vive dentro de la tarjeta (no flota en la pantalla) -->
+      <!-- Estado de la generación del link y de la confirmación real de pago -->
       <div class="pay-notify-inline" id="payNotifyBar">
         <p class="pay-notify-status" id="payNotifyStatus"></p>
-        <button class="select-method-btn" id="payNotifyFallback" style="display:none;" onclick="notifyPaymentFallback()">Avisar por WhatsApp</button>
       </div>
     </div>
   </div>
@@ -1218,7 +1213,9 @@ products.forEach(p => {
   if(p.vol === '1L') promoTag = '<div class="promo-tag">2x -$2.000</div>';
   if(p.id === 'berries-475') promoTag = '<div class="promo-tag">2x $15.000</div>';
 
-  const bottleVisual = bottleSVG(f.color);
+  const bottleVisual = p.flavor === 'clasico'
+    ? `<img src="clasico.jpg" alt="Botella ${f.label} ${p.vol}" class="card-photo">`
+    : bottleSVG(f.color);
 
   card.innerHTML = `
     ${promoTag}
@@ -1405,9 +1402,7 @@ function confirmOrder(){
   lastOrderResumen = resumen;
   lastOrderTotal = order.total;
   lastOrderItems = itemsPayload; // se usa recién al elegir método de pago, para reservar stock real
-  paymentNotifySent = false; // este es un pedido nuevo, puede mandar su propio aviso
   awaitingReturnFromPay = false;
-  selectedPayMethod = null;
   selectedDeliveryDay = null;
   selectedDeliveryTime = null;
   document.getElementById('ticket-mp').classList.remove('selected');
@@ -1514,37 +1509,27 @@ function getFullOrderText(){
   return lastOrderResumen;
 }
 
-let lastOrderItems = {}; // id -> qty del último pedido armado, se manda al servidor recién al elegir método de pago
-let selectedPayMethod = null; // siempre 'mp' ahora, se deja la variable por si se suma otro método más adelante
-let paymentNotifySent = false; // evita mandar el mail más de una vez por pedido
+let lastOrderItems = {}; // id -> qty del último pedido armado, se manda al servidor recién al tocar "Pagar ahora"
 let awaitingReturnFromPay = false; // true justo después de tocar "Pagar ahora", hasta que volvés a esta pestaña
 
-async function selectPayMethod(method){
-  selectedPayMethod = method;
-  awaitingReturnFromPay = true;
-  document.getElementById('ticket-mp').classList.add('selected');
-
+// Le pide al Apps Script que genere un link de pago de Mercado Pago con el
+// MONTO YA FIJO para este pedido (el cliente ya no lo escribe a mano).
+// La confirmación real de que la plata entró la manda Mercado Pago solo,
+// por atrás, cuando el pago queda aprobado — no depende de que el cliente avise nada.
+async function goToMercadoPago(){
+  const btn = document.getElementById('mpPayBtn');
+  btn.disabled = true;
+  btn.textContent = 'Preparando el pago...';
   document.getElementById('payNotifyBar').classList.add('visible');
-
-  // Si ya mandamos el aviso para este pedido, no lo repetimos (evita spam de mails
-  // por clicks repetidos en "Pagar ahora").
-  if(paymentNotifySent){
-    document.getElementById('payNotifyStatus').textContent = '✅ Ya te avisamos antes por este pedido, tranquilo.';
-    document.getElementById('payNotifyBar').classList.add('sent');
-    return;
-  }
-
-  document.getElementById('payNotifyStatus').textContent = 'Avisando automáticamente...';
-  document.getElementById('payNotifyFallback').style.display = 'none';
   document.getElementById('payNotifyBar').classList.remove('sent');
+  document.getElementById('payNotifyStatus').textContent = 'Generando tu link de pago con el monto exacto...';
 
   try{
     const res = await fetch(STOCK_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
-        type: 'notify_payment',
-        method: method,
+        type: 'create_preference',
         items: lastOrderItems,
         customer: customer,
         total: lastOrderTotal,
@@ -1552,33 +1537,28 @@ async function selectPayMethod(method){
       })
     });
     const data = await res.json();
-    if(data.success){
-      if(data.stock){ stockData = data.stock; applyStockToUI(); }
-      paymentNotifySent = true;
-      document.getElementById('payNotifyStatus').textContent = '✅ Ya te avisamos automáticamente. Pagá tranquilo — cuando vuelvas a esta pestaña te mostramos la confirmación sola.';
+
+    if(data.success && data.init_point){
+      awaitingReturnFromPay = true;
+      document.getElementById('payNotifyStatus').textContent = '✅ Te abrimos Mercado Pago en otra pestaña, con el monto ya cargado — no tenés que escribir nada. Cuando termines de pagar y vuelvas acá, te mostramos la confirmación sola.';
       document.getElementById('payNotifyBar').classList.add('sent');
+      window.open(data.init_point, '_blank');
+      btn.textContent = 'Pagar ahora →';
+      btn.disabled = false;
     } else if(data.insufficient){
-      // Alguien se llevó el stock justo mientras el cliente elegía cómo pagar
+      // Alguien se llevó el stock justo mientras el cliente iba a pagar
       if(data.stock){ stockData = data.stock; applyStockToUI(); }
       document.getElementById('payNotifyStatus').textContent = '⚠️ ' + (data.error || 'Nos quedamos sin stock de algo de tu pedido.') + ' Cerrá esta ventana y ajustá el carrito.';
-      document.getElementById('payNotifyFallback').style.display = 'none';
+      btn.textContent = 'Pagar ahora →';
+      btn.disabled = false;
     } else {
       throw new Error(data.error || 'fallo desconocido');
     }
   } catch(err){
-    document.getElementById('payNotifyStatus').textContent = 'No pudimos avisar automáticamente 😕 — usá este botón como respaldo:';
-    document.getElementById('payNotifyFallback').style.display = 'inline-block';
+    document.getElementById('payNotifyStatus').textContent = 'No pudimos generar el link de pago 😕 — probá de nuevo en un rato.';
+    btn.textContent = 'Pagar ahora →';
+    btn.disabled = false;
   }
-}
-
-function notifyPaymentFallback(){
-  if(!lastOrderResumen) return;
-  const waText = encodeURIComponent(getFullOrderText() + `\n\nMétodo de pago: Mercado Pago`);
-  window.open(`https://wa.me/${OWNER_WHATSAPP}?text=${waText}`, '_blank');
-  paymentNotifySent = true;
-  document.getElementById('payNotifyStatus').textContent = '✅ Aviso enviado por WhatsApp.';
-  document.getElementById('payNotifyFallback').style.display = 'none';
-  document.getElementById('payNotifyBar').classList.add('sent');
 }
 
 function showThankYou(){

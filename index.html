@@ -99,21 +99,6 @@
     filter: drop-shadow(0 20px 34px rgba(23,57,46,0.22));
   }
 
-  /* ---------- RAMAS DE LIMONERO (detalle decorativo) ---------- */
-  .lemon-decor{
-    position:absolute;
-    width: 130px;
-    height: 130px;
-    z-index: 0;
-    pointer-events:none;
-  }
-  .lemon-decor.fixed{ position:fixed; }
-  .lemon-decor--tl{ top: -18px; left: -18px; }
-  .lemon-decor--tr{ top: -18px; right: -18px; transform: scaleX(-1); }
-  .lemon-decor--br{ bottom: -18px; right: -18px; transform: rotate(180deg); }
-  .lemon-decor--bl{ bottom: -18px; left: -18px; transform: rotate(180deg) scaleX(-1); }
-  @media (max-width: 760px){ .lemon-decor{ display:none; } }
-
   /* ---------- SECTION LABELS ---------- */
   .section-head{
     display:flex;
@@ -1666,25 +1651,6 @@ function copyText(text, btn){
     }, 1500);
   });
 }
-
-// ---------- RAMAS DE LIMONERO (detalle decorativo, sutil, en las esquinas) ----------
-// Usa el archivo logo-arbol.png subido al repo (mismo lugar que index.html).
-function addLemonDecor(container, position, fixed){
-  if(!container) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'lemon-decor lemon-decor--' + position + (fixed ? ' fixed' : '');
-  wrap.innerHTML = '<img src="logo-arbol.png" alt="" style="width:100%;height:100%;object-fit:contain;">';
-  container.appendChild(wrap);
-}
-
-addLemonDecor(document.querySelector('.hero'), 'tl');
-addLemonDecor(document.querySelector('.hero'), 'br');
-addLemonDecor(document.getElementById('deliverySection'), 'tr', true);
-addLemonDecor(document.getElementById('deliverySection'), 'bl', true);
-addLemonDecor(document.getElementById('paymentSection'), 'tr', true);
-addLemonDecor(document.getElementById('paymentSection'), 'bl', true);
-addLemonDecor(document.getElementById('thankYouOverlay'), 'tr', true);
-addLemonDecor(document.getElementById('thankYouOverlay'), 'bl', true);
 
 updateCart();
 loadStock();

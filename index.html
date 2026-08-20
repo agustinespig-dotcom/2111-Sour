@@ -881,7 +881,7 @@
     margin: 0 auto;
     padding: 0 24px;
   }
-  .payment-close button{
+  .payment-close .payment-x{
     background: rgba(23,57,46,0.08);
     border: none;
     color: var(--ink);
@@ -900,9 +900,7 @@
     cursor: pointer;
     padding: 8px 4px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
+    flex-shrink: 1;
   }
   @media (max-width: 380px){
     .payment-back{ font-size: 11.5px; }
@@ -1067,7 +1065,7 @@
 <div class="payment-section" id="deliverySection">
   <div class="payment-close">
     <button class="payment-back" onclick="backToCartFromDelivery()">← Volver al carrito</button>
-    <button onclick="cancelToCart()">✕</button>
+    <button class="payment-x" onclick="cancelToCart()">✕</button>
   </div>
   <div class="section-head">
     <span class="num">02</span>
@@ -1098,8 +1096,8 @@
 
 <div class="payment-section" id="paymentSection">
   <div class="payment-close">
-    <button class="payment-back" onclick="backToDeliveryFromPayment()">← Volver</button>
-    <button onclick="cancelToCart()">✕</button>
+    <button class="payment-back" onclick="backToDeliveryFromPayment()">← Volver al envío</button>
+    <button class="payment-x" onclick="cancelToCart()">✕</button>
   </div>
   <div class="section-head">
     <span class="num">03</span>

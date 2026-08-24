@@ -192,7 +192,7 @@
     .price{ font-size: 15px; }
     .vol{ font-size: 10px; padding: 2px 8px; }
     .bottle{ width: 26px; height: 42px; }
-    .card-photo{ height: 48px; }
+    .card-photo{ height: 72px; }
     .price-row{
       flex-direction: column;
       align-items: center;
@@ -244,7 +244,7 @@
     display:block;
   }
   .card-photo{
-    height: 64px;
+    height: 100px;
     width: auto;
     border-radius: 6px;
     object-fit: cover;
@@ -1275,6 +1275,16 @@ const products = [
   { id: 'berries-475',  flavor: 'berries',   vol: '475ml', price: 8500 },
 ];
 
+// Fotos reales de botella, una por id de producto (mismo nombre de archivo
+// que el id, ej: 'clasico-1L' -> 'clasico-1L.png', subido junto a index.html
+// en el repo). El id que NO esté acá sigue usando el ícono dibujado
+// (bottleSVG) como placeholder — así podés ir agregando fotos de a una sin
+// que las demás se rompan. Para agregar una foto nueva, solo agregá la línea
+// acá con el nombre exacto del archivo que subiste.
+const productImages = {
+  'clasico-1L': 'clasico-1L.png',
+};
+
 // Mismo criterio: promos de fallback, se pisan con la hoja "Promos" apenas carga.
 const DEFAULT_PROMOS = [
   { etiqueta: '2x Clásico/Zero 1L',      campo: 'id',  valor: 'clasico-1L,zero-1L',     campo2: '',   valor2: '',       cada: 2, tipo: 'precio_pack', monto: 26000 },
@@ -1541,9 +1551,11 @@ function renderCatalog(){
 
     const price = priceData[p.id] !== undefined ? priceData[p.id] : p.price;
     const displayName = productNames[p.id] || f.label;
-    // Por ahora no hay fotos reales de las botellas — las 4 usan el mismo
-    // placeholder dibujado (bottleSVG). Cuando tengas fotos, avisame.
-    const bottleVisual = bottleSVG(f.color);
+    // Si hay foto real para este producto (productImages), la usamos; si no,
+    // seguimos con el ícono dibujado (bottleSVG) como placeholder.
+    const bottleVisual = productImages[p.id]
+      ? `<img class="card-photo" src="${productImages[p.id]}" alt="${displayName} ${p.vol}">`
+      : bottleSVG(f.color);
 
     card.innerHTML = `
       ${promoTagForProduct(p)}

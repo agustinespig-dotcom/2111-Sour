@@ -475,6 +475,34 @@
     margin-bottom: 4px;
     line-height: 1.4;
   }
+  .payment-order-summary{
+    background: rgba(14,54,52,0.04);
+    border: 1px dashed rgba(14,54,52,0.18);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 14px 0;
+  }
+  .payment-order-summary .po-title{
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(14,54,52,0.5);
+    margin-bottom: 6px;
+  }
+  .payment-order-summary .po-item{
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.6;
+  }
+  .payment-order-summary .po-delivery{
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: rgba(14,54,52,0.6);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(14,54,52,0.18);
+  }
   .amount-row{
     background: rgba(217,83,107,0.08);
     border-radius: 8px;
@@ -623,6 +651,7 @@
     font-size: 11.5px;
     font-weight: 600;
     line-height: 1.3;
+    text-align: center;
   }
   @media (max-width: 480px){
     .whatsapp-fab{ left: 12px; bottom: 12px; padding-right: 8px; }
@@ -1154,8 +1183,9 @@
 
   <div class="pay-wrap pay-wrap-single">
     <div class="ticket" id="ticket-mp">
-      <h3>Pagá con tu banco, Mercado Pago o transferencia</h3>
-      <p class="mp-instructions">Mercado Pago acepta todo: tarjeta, saldo en cuenta o transferencia bancaria, todo desde el mismo botón. El monto ya viene cargado automáticamente, no tienes que escribir nada:</p>
+      <h3>Paga con tu banco, tarjeta o transferencia</h3>
+      <p class="mp-instructions">Tarjeta, transferencia o tu banco, todo con Mercado Pago.</p>
+      <div class="payment-order-summary" id="paymentOrderSummary"></div>
       <div class="row">
         <span class="label">Productos</span>
         <span class="value" id="mpProductsAmount">$0</span>
@@ -1209,7 +1239,7 @@
 <!-- BOTÓN FLOTANTE DE WHATSAPP -->
 <a class="whatsapp-fab" id="whatsappFab" href="#" target="_blank" rel="noopener">
   <span class="whatsapp-fab-icon">💬</span>
-  <span class="whatsapp-fab-text">¿Tienes dudas?<br>Habla conmigo</span>
+  <span class="whatsapp-fab-text">¿Tienes dudas?<br>¡Escríbenos!</span>
 </a>
 
 <!-- OVERLAY + DRAWER -->
@@ -1289,7 +1319,7 @@ let comunaCosts = { 'Las Condes': 0, 'Lo Barnechea': 0, 'Vitacura': 0 };
 
 const cart = {}; // id -> qty
 const customer = { nombre: '', telefono: '', comuna: '', direccion: '' };
-const money = n => n.toLocaleString('es-AR');
+const money = n => n.toLocaleString('es-CL');
 let stockData = {};       // id -> cantidad disponible
 let stockLoaded = false;
 let orderConfirmed = false;
@@ -1846,14 +1876,35 @@ function updateDeliveryContinueState(){
   document.getElementById('deliveryContinueBtn').disabled = !(selectedDeliveryDay && selectedDeliveryTime);
 }
 
-// Al pasar a la pantalla de pago, arma el desglose Productos + Envío = Total
-// con el precio de envío ya elegido (el monto final y validado lo confirma
-// igual el servidor recién al tocar "Pagar ahora").
+// Arma el resumen "Tu pedido" que se ve justo antes del monto a pagar, con
+// los productos de lastOrderItems (id -> qty) y la entrega ya elegida.
+function renderPaymentOrderSummary(){
+  const box = document.getElementById('paymentOrderSummary');
+  if(!box) return;
+  const itemsHtml = Object.entries(lastOrderItems).map(([id, qty]) => {
+    const p = products.find(x => x.id === id);
+    if(!p) return '';
+    const name = productNames[id] || flavors[p.flavor].label;
+    return `<div class="po-item">${qty}x ${name} ${p.vol}</div>`;
+  }).join('');
+
+  let deliveryHtml = '';
+  if(selectedDeliveryDay && selectedDeliveryTime){
+    deliveryHtml = `<div class="po-delivery">Entrega: ${deliveryDayLabels[selectedDeliveryDay]} (${selectedDeliveryTime}) · ${customer.comuna}</div>`;
+  }
+
+  box.innerHTML = `<div class="po-title">Tu pedido</div>${itemsHtml}${deliveryHtml}`;
+}
+
+// Al pasar a la pantalla de pago, arma el resumen del pedido y el desglose
+// Productos + Envío = Total con el precio de envío ya elegido (el monto
+// final y validado lo confirma igual el servidor recién al tocar "Pagar ahora").
 function continueToPayment(){
   if(!selectedDeliveryDay || !selectedDeliveryTime) return;
 
   const productsTotal = lastOrderTotal;
   const shipping = getShippingTotal() || 0;
+  renderPaymentOrderSummary();
   document.getElementById('mpProductsAmount').textContent = '$' + money(productsTotal);
   document.getElementById('mpShippingAmount').textContent = shipping > 0 ? '$' + money(shipping) : 'Gratis';
   document.getElementById('mpAmount').textContent = '$' + money(productsTotal + shipping);
@@ -1959,7 +2010,7 @@ async function goToMercadoPago(){
         // Si el navegador igual bloqueó la pestaña en blanco (raro, pero puede
         // pasar con bloqueadores de popups muy agresivos), dejamos un link
         // clickeable como respaldo para que el cliente no se quede trabado.
-        document.getElementById('payNotifyStatus').innerHTML = '⚠️ Tu navegador bloqueó la ventana emergente. <a href="' + data.init_point + '" target="_blank" style="color:var(--frambuesa);font-weight:700;">Tocá acá para pagar →</a>';
+        document.getElementById('payNotifyStatus').innerHTML = '⚠️ Tu navegador bloqueó la ventana emergente. <a href="' + data.init_point + '" target="_blank" style="color:var(--frambuesa);font-weight:700;">Toca acá para pagar →</a>';
       }
       btn.textContent = 'Pagar ahora →';
       btn.disabled = false;

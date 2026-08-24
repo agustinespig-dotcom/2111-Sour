@@ -416,14 +416,22 @@
     background: rgba(14,54,52,0.05);
     border: 1px solid rgba(14,54,52,0.18);
     border-radius: 10px;
-    padding: 12px 0;
+    padding: 12px 4px;
     font-family: var(--font-display);
     font-weight: 700;
     font-size: 15px;
     color: var(--ink);
     cursor: pointer;
+    line-height: 1.3;
   }
-  .time-btn{ font-family: var(--font-mono); font-size: 13px; }
+  .time-btn{ font-family: var(--font-mono); font-size: 12.5px; }
+  .time-btn .slot-price{
+    display:block;
+    font-size: 10.5px;
+    font-weight: 500;
+    opacity: 0.7;
+    margin-top: 2px;
+  }
   .day-btn:hover, .time-btn:hover{ border-color: var(--frambuesa); }
   .day-btn.selected, .time-btn.selected{
     background: linear-gradient(90deg, var(--clasico), var(--frambuesa));
@@ -436,6 +444,16 @@
     text-decoration: line-through;
   }
   .day-btn.unavailable:hover, .time-btn.unavailable:hover{ border-color: rgba(14,54,52,0.18); }
+  .delivery-price-hint{
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--zero);
+    margin-top: 16px;
+    text-align:center;
+    display:none;
+  }
+  .delivery-price-hint.visible{ display:block; }
   .mp-note{
     font-size: 11px;
     color: rgba(14,54,52,0.55);
@@ -1084,11 +1102,12 @@
         <button class="day-btn" data-day="J" onclick="selectDeliveryDay('J')">J</button>
         <button class="day-btn" data-day="V" onclick="selectDeliveryDay('V')">V</button>
       </div>
-      <p class="mp-instructions" style="margin-top:18px;">¿Mañana o tarde?</p>
+      <p class="mp-instructions" style="margin-top:18px;">¿Mañana o tarde? (el costo de envío de cada horario aparece apenas eliges el día)</p>
       <div class="time-picker">
         <button class="time-btn" data-time="AM" onclick="selectDeliveryTime('AM')">AM</button>
         <button class="time-btn" data-time="PM" onclick="selectDeliveryTime('PM')">PM</button>
       </div>
+      <p class="delivery-price-hint" id="deliveryPriceHint"></p>
       <button class="mp-btn" id="deliveryContinueBtn" onclick="continueToPayment()" disabled style="width:100%; border:none; margin-top:22px;">Continuar a pagar →</button>
     </div>
   </div>
@@ -1109,8 +1128,16 @@
     <div class="ticket" id="ticket-mp">
       <h3>Pagá con tu banco, Mercado Pago o transferencia</h3>
       <p class="mp-instructions">Mercado Pago acepta todo: tarjeta, saldo en cuenta o transferencia bancaria, todo desde el mismo botón. El monto ya viene cargado automáticamente, no tienes que escribir nada:</p>
+      <div class="row">
+        <span class="label">Productos</span>
+        <span class="value" id="mpProductsAmount">$0</span>
+      </div>
+      <div class="row" id="mpShippingRow">
+        <span class="label">Envío</span>
+        <span class="value" id="mpShippingAmount">$0</span>
+      </div>
       <div class="row amount-row">
-        <span class="label">Monto a pagar</span>
+        <span class="label">Total a pagar</span>
         <span class="value amount-value" id="mpAmount">$0</span>
       </div>
       <button class="mp-btn" id="mpPayBtn" onclick="goToMercadoPago()" style="width:100%; border:none;">Pagar ahora →</button>
@@ -1236,7 +1263,10 @@ let lastOrderResumen = ''; // texto del último pedido confirmado, para el aviso
 let lastOrderTotal = 0;
 
 // ---------- STOCK: cargar desde Google Sheets ----------
-let deliveryAvailability = null; // { L:{AM,PM}, M:{...}, ... } — null = todavía no cargó, tratamos todo como disponible
+// { L:{AM,PM}, M:{...}, ... } — cada AM/PM es null (no disponible) o un número
+// (precio de envío para ese día/horario, 0 = gratis). null (la variable
+// completa) = todavía no cargó, tratamos todo como disponible y sin precio.
+let deliveryAvailability = null;
 
 async function loadStock(){
   try{
@@ -1265,14 +1295,45 @@ async function loadStock(){
   }
 }
 
+// Habilita/deshabilita los botones de DÍA según si ese día tiene algún
+// horario con precio cargado. Si ya había un día elegido, además refresca
+// los botones de horario de ESE día (por si cambiaron los precios).
 function applyDeliveryAvailabilityToUI(){
   if(!deliveryAvailability) return; // sin datos, dejamos todo habilitado
   document.querySelectorAll('.day-btn').forEach(btn => {
     const code = btn.dataset.day;
     const avail = deliveryAvailability[code];
-    const dayHasSlot = avail && (avail.AM || avail.PM);
+    const dayHasSlot = avail && (
+      (avail.AM !== null && avail.AM !== undefined) ||
+      (avail.PM !== null && avail.PM !== undefined)
+    );
     btn.disabled = !dayHasSlot;
     btn.classList.toggle('unavailable', !dayHasSlot);
+  });
+  if(selectedDeliveryDay) updateTimeButtonsForDay(selectedDeliveryDay);
+}
+
+// Pinta el precio de cada horario (AM/PM) para el día puntual que se eligió,
+// y deshabilita el horario que no tenga precio cargado ese día.
+function updateTimeButtonsForDay(code){
+  const avail = deliveryAvailability ? deliveryAvailability[code] : null;
+  document.querySelectorAll('.time-btn').forEach(b => {
+    const slot = b.dataset.time;
+    const price = avail ? avail[slot] : undefined;
+    const enabled = avail ? (price !== null && price !== undefined) : true;
+    b.disabled = !enabled;
+    b.classList.toggle('unavailable', !enabled);
+    if(enabled && typeof price === 'number'){
+      const priceTxt = price > 0 ? ('$' + money(price)) : 'Gratis';
+      b.innerHTML = `${slot}<span class="slot-price">${priceTxt}</span>`;
+    } else {
+      b.textContent = slot;
+    }
+    if(!enabled && selectedDeliveryTime === slot){
+      selectedDeliveryTime = null;
+      selectedDeliveryPrice = 0;
+      b.classList.remove('selected');
+    }
   });
 }
 
@@ -1664,14 +1725,17 @@ function confirmOrder(){
   awaitingReturnFromPay = false;
   selectedDeliveryDay = null;
   selectedDeliveryTime = null;
+  selectedDeliveryPrice = 0;
   document.getElementById('ticket-mp').classList.remove('selected');
   document.getElementById('payNotifyBar').classList.remove('visible', 'sent');
+  document.getElementById('deliveryPriceHint').classList.remove('visible');
   document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('selected'));
-  document.querySelectorAll('.time-btn').forEach(b => { b.classList.remove('selected', 'unavailable'); b.disabled = false; });
+  document.querySelectorAll('.time-btn').forEach(b => { b.classList.remove('selected', 'unavailable'); b.disabled = false; b.textContent = b.dataset.time; });
   applyDeliveryAvailabilityToUI(); // re-aplica qué días están habilitados esta semana
   document.getElementById('deliveryContinueBtn').disabled = true;
-  const mpAmountEl = document.getElementById('mpAmount');
-  if(mpAmountEl) mpAmountEl.textContent = '$' + money(order.total);
+  document.getElementById('mpProductsAmount').textContent = '$' + money(order.total);
+  document.getElementById('mpShippingAmount').textContent = '$0';
+  document.getElementById('mpAmount').textContent = '$' + money(order.total);
 
   // Limpiamos el carrito para evitar que se confirme el mismo pedido dos veces
   Object.keys(cart).forEach(id => delete cart[id]);
@@ -1689,8 +1753,9 @@ function confirmOrder(){
   document.getElementById('deliverySection').scrollTop = 0;
 }
 
-let selectedDeliveryDay = null;  // 'L' | 'M' | 'X' | 'J' | 'V'
-let selectedDeliveryTime = null; // 'AM' | 'PM'
+let selectedDeliveryDay = null;   // 'L' | 'M' | 'X' | 'J' | 'V'
+let selectedDeliveryTime = null;  // 'AM' | 'PM'
+let selectedDeliveryPrice = 0;    // costo de envío del día/horario elegido
 const deliveryDayLabels = { L: 'Lunes', M: 'Martes', X: 'Miércoles', J: 'Jueves', V: 'Viernes' };
 
 function selectDeliveryDay(code){
@@ -1698,36 +1763,52 @@ function selectDeliveryDay(code){
   if(btn && btn.disabled) return; // ese día no se entrega esta semana
 
   selectedDeliveryDay = code;
+  selectedDeliveryTime = null;
+  selectedDeliveryPrice = 0;
   document.querySelectorAll('.day-btn').forEach(b => b.classList.toggle('selected', b.dataset.day === code));
+  document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('selected'));
 
-  // Deshabilitamos el horario que no esté disponible ese día en particular
-  const avail = deliveryAvailability ? deliveryAvailability[code] : null;
-  document.querySelectorAll('.time-btn').forEach(b => {
-    const slot = b.dataset.time;
-    const enabled = !avail || avail[slot]; // sin datos = todo habilitado
-    b.disabled = !enabled;
-    b.classList.toggle('unavailable', !enabled);
-    if(!enabled && selectedDeliveryTime === slot){
-      selectedDeliveryTime = null;
-      b.classList.remove('selected');
-    }
-  });
-
+  updateTimeButtonsForDay(code);
   updateDeliveryContinueState();
+  updateDeliveryPriceHint();
 }
 
 function selectDeliveryTime(slot){
   selectedDeliveryTime = slot;
+  const avail = deliveryAvailability && selectedDeliveryDay ? deliveryAvailability[selectedDeliveryDay] : null;
+  selectedDeliveryPrice = (avail && typeof avail[slot] === 'number') ? avail[slot] : 0;
   document.querySelectorAll('.time-btn').forEach(b => b.classList.toggle('selected', b.dataset.time === slot));
   updateDeliveryContinueState();
+  updateDeliveryPriceHint();
+}
+
+// Muestra "Costo de envío: $X" (o "Gratis") apenas hay día + horario elegidos.
+function updateDeliveryPriceHint(){
+  const hint = document.getElementById('deliveryPriceHint');
+  if(!hint) return;
+  if(selectedDeliveryDay && selectedDeliveryTime){
+    hint.textContent = `Costo de envío: ${selectedDeliveryPrice > 0 ? '$' + money(selectedDeliveryPrice) : 'Gratis'}`;
+    hint.classList.add('visible');
+  } else {
+    hint.classList.remove('visible');
+  }
 }
 
 function updateDeliveryContinueState(){
   document.getElementById('deliveryContinueBtn').disabled = !(selectedDeliveryDay && selectedDeliveryTime);
 }
 
+// Al pasar a la pantalla de pago, arma el desglose Productos + Envío = Total
+// con el precio de envío ya elegido (el monto final y validado lo confirma
+// igual el servidor recién al tocar "Pagar ahora").
 function continueToPayment(){
   if(!selectedDeliveryDay || !selectedDeliveryTime) return;
+
+  const productsTotal = lastOrderTotal;
+  const shipping = selectedDeliveryPrice || 0;
+  document.getElementById('mpProductsAmount').textContent = '$' + money(productsTotal);
+  document.getElementById('mpShippingAmount').textContent = shipping > 0 ? '$' + money(shipping) : 'Gratis';
+  document.getElementById('mpAmount').textContent = '$' + money(productsTotal + shipping);
 
   document.getElementById('deliverySection').classList.remove('visible');
   document.getElementById('paymentSection').classList.add('visible');
@@ -1757,13 +1838,16 @@ function backToCartFromDelivery(){
   openDrawer();
 }
 
-// Arma el texto final del pedido (pedido + entrega elegida, si ya la eligió).
-// Se recalcula cada vez que hace falta en vez de pegarse al resumen original,
-// para que ir y volver entre ventanas nunca duplique la línea de entrega.
+// Arma el texto final del pedido (pedido + entrega elegida + envío, si ya se
+// eligió). Se recalcula cada vez que hace falta en vez de pegarse al resumen
+// original, para que ir y volver entre ventanas nunca duplique la línea de entrega.
 function getFullOrderText(){
   if(selectedDeliveryDay && selectedDeliveryTime){
-    const deliveryLine = `Entrega deseada: ${deliveryDayLabels[selectedDeliveryDay]} (${selectedDeliveryTime})`;
-    return lastOrderResumen + `\n\n${deliveryLine}`;
+    const shipping = selectedDeliveryPrice || 0;
+    const shippingTxt = shipping > 0 ? `$${money(shipping)}` : 'Gratis';
+    const deliveryLine = `Entrega deseada: ${deliveryDayLabels[selectedDeliveryDay]} (${selectedDeliveryTime}) — Envío: ${shippingTxt}`;
+    const grandTotal = lastOrderTotal + shipping;
+    return lastOrderResumen + `\n\n${deliveryLine}\nTOTAL CON ENVÍO: $${money(grandTotal)}`;
   }
   return lastOrderResumen;
 }
@@ -1773,9 +1857,10 @@ let lastOrderId = null; // ID del pedido en 'PedidosPendientes', para poder veri
 let awaitingReturnFromPay = false; // true justo después de tocar "Pagar ahora", hasta que volvés a esta pestaña
 
 // Le pide al Apps Script que genere un link de pago de Mercado Pago con el
-// MONTO YA FIJO para este pedido (el cliente ya no lo escribe a mano).
-// La confirmación real de que la plata entró la manda Mercado Pago solo,
-// por atrás, cuando el pago queda aprobado — no depende de que el cliente avise nada.
+// MONTO YA FIJO para este pedido (productos + envío; el cliente ya no
+// escribe nada). La confirmación real de que la plata entró la manda
+// Mercado Pago solo, por atrás, cuando el pago queda aprobado — no depende
+// de que el cliente avise nada.
 async function goToMercadoPago(){
   const btn = document.getElementById('mpPayBtn');
   btn.disabled = true;
@@ -1801,17 +1886,18 @@ async function goToMercadoPago(){
         items: lastOrderItems,
         customer: customer,
         total: lastOrderTotal,
+        delivery: { day: selectedDeliveryDay, time: selectedDeliveryTime },
         resumen: getFullOrderText()
       })
     });
     const data = await res.json();
 
     if(data.success && data.init_point){
-      // El monto real es el que calculó el servidor con los precios/promos
-      // vigentes en la Sheet en este mismo instante (puede diferir un poco del
-      // que se veía en pantalla si justo cambiaste un precio recién).
+      // El monto real (productos + envío) es el que calculó el servidor con
+      // los precios/promos/envío vigentes en la Sheet en este mismo instante
+      // (puede diferir un poco del que se veía en pantalla si justo cambiaste
+      // un precio recién).
       if(typeof data.total === 'number'){
-        lastOrderTotal = data.total;
         const mpAmountEl = document.getElementById('mpAmount');
         if(mpAmountEl) mpAmountEl.textContent = '$' + money(data.total);
       }
@@ -1837,7 +1923,12 @@ async function goToMercadoPago(){
       btn.textContent = 'Pagar ahora →';
       btn.disabled = false;
     } else {
-      throw new Error(data.error || 'fallo desconocido');
+      // Cubre también el caso de "ese día/horario de entrega ya no está
+      // disponible" que puede devolver el servidor al validar el envío.
+      if(payWindow) payWindow.close();
+      document.getElementById('payNotifyStatus').textContent = '⚠️ ' + (data.error || 'No se pudo generar el link de pago.');
+      btn.textContent = 'Pagar ahora →';
+      btn.disabled = false;
     }
   } catch(err){
     if(payWindow) payWindow.close();

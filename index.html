@@ -1200,6 +1200,11 @@ let priceData = {};
 products.forEach(p => priceData[p.id] = p.price);
 let promosData = DEFAULT_PROMOS;
 
+// Nombres de producto reales, tal como estén escritos en la columna "producto"
+// de la Sheet. Vacío por defecto: mientras no cargue la Sheet (o si la celda
+// está en blanco para algún id), se usa el nombre de sabor de fallback (f.label).
+let productNames = {};
+
 const STOCK_API_URL = 'https://script.google.com/macros/s/AKfycbyuHVH05FHc5dBuW6G-PG7gs43m9To4i3_k_t6pKQvWoNBs0Ao4X0VEQfnbrIY1EQbG/exec';
 const OWNER_WHATSAPP = '56977690321'; // tu número, sin + ni espacios
 
@@ -1210,7 +1215,8 @@ function buildOrderSummary(order){
   text += `Dirección: ${customer.direccion}\n\n`;
   order.items.forEach(i => {
     const f = flavors[i.flavor];
-    text += `${i.qty}x ${f.label} ${i.vol} — $${money(i.lineTotal)}\n`;
+    const name = productNames[i.id] || f.label;
+    text += `${i.qty}x ${name} ${i.vol} — $${money(i.lineTotal)}\n`;
   });
   if(order.promoLines.length){
     text += `\nPromos:\n`;
@@ -1238,16 +1244,17 @@ async function loadStock(){
     const data = await res.json();
     stockData = data.stock || data; // 'data' a secas es compatibilidad con una versión vieja del script
 
-    // Precios y promos reales de la Sheet. Si la hoja "Promos" existe pero está
-    // vacía (todas las filas sin "x" en Activo), respetamos eso: cero promos.
-    // Si la respuesta ni siquiera trae la clave "promos" (versión vieja del
-    // script sin actualizar), seguimos con las promos de fallback.
+    // Nombres, precios y promos reales de la Sheet. Si la hoja "Promos" existe
+    // pero está vacía (todas las filas sin "x" en Activo), respetamos eso: cero
+    // promos. Si la respuesta ni siquiera trae la clave "promos" (versión vieja
+    // del script sin actualizar), seguimos con las promos de fallback.
+    if(data.names) productNames = { ...productNames, ...data.names };
     if(data.prices) priceData = { ...priceData, ...data.prices };
     if(Array.isArray(data.promos)) promosData = data.promos;
 
     deliveryAvailability = data.delivery || null;
     stockLoaded = true;
-    renderCatalog(); // recrea las tarjetas con los precios/promos reales
+    renderCatalog(); // recrea las tarjetas con los nombres/precios/promos reales
     renderPromoBanner(); // idem con los chips de promo de acá arriba
     applyStockToUI();
     applyDeliveryAvailabilityToUI();
@@ -1357,7 +1364,9 @@ function groupLabel(campo, valor){
   if(campo === 'id'){
     return opciones.map(id => {
       const prod = products.find(p => p.id === id);
-      return prod ? `${flavors[prod.flavor].label} ${prod.vol}` : id;
+      if(!prod) return id;
+      const name = productNames[id] || flavors[prod.flavor].label;
+      return `${name} ${prod.vol}`;
     }).join(' o ');
   }
   return opciones.join(' o ');
@@ -1411,6 +1420,7 @@ function renderCatalog(){
     card.style.setProperty('--flavor', f.color);
 
     const price = priceData[p.id] !== undefined ? priceData[p.id] : p.price;
+    const displayName = productNames[p.id] || f.label;
     // Por ahora no hay fotos reales de las botellas — las 4 usan el mismo
     // placeholder dibujado (bottleSVG). Cuando tengas fotos, avisame.
     const bottleVisual = bottleSVG(f.color);
@@ -1422,7 +1432,7 @@ function renderCatalog(){
         <span class="vol">${p.vol}</span>
       </div>
       <div>
-        <h3>${f.label}</h3>
+        <h3>${displayName}</h3>
         <div class="stock-badge" id="stock-${p.id}"></div>
       </div>
       <div class="price-row">
@@ -1569,10 +1579,11 @@ function renderDrawer(order){
   let html = '';
   order.items.forEach(i => {
     const f = flavors[i.flavor];
+    const name = productNames[i.id] || f.label;
     html += `
       <div class="drawer-item">
         <div>
-          <div class="name">${f.label} · ${i.vol}</div>
+          <div class="name">${name} · ${i.vol}</div>
           <div class="sub">$${money(i.price)} c/u</div>
         </div>
         <div class="stepper">

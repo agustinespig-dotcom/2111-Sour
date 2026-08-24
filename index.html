@@ -182,36 +182,14 @@
       gap: 10px;
       padding: 0 14px 8px;
     }
-    .card{
-      padding: 14px 12px 12px;
-      gap: 10px;
-      align-items: center;
-      text-align: center;
-    }
-    .card h3{ font-size: 15px; }
-    .price{ font-size: 15px; }
-    .vol{ font-size: 10px; padding: 2px 8px; }
-    .bottle{ width: 26px; height: 42px; }
-    .card-photo{ height: 72px; }
-    .price-row{
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-    }
-    .stepper{ gap: 6px; padding: 3px; }
-    .stepper button{ width: 24px; height: 24px; font-size: 14px; }
-    .stepper .qty{ font-size: 13px; min-width: 14px; }
-    .stock-badge{ font-size: 9px; }
-    .promo-tag{ font-size: 9px; padding: 2px 6px; right: 8px; }
   }
   .card{
     background: var(--paper);
     border: 1px solid var(--line);
     border-radius: 14px;
-    padding: 22px 20px 20px;
+    overflow: hidden;
     display:flex;
     flex-direction:column;
-    gap: 14px;
     transition: border-color .2s ease, transform .2s ease;
     position: relative;
     min-width: 0; /* clave: sin esto, la tarjeta no se achica al ancho de su columna y desborda a la derecha en pantallas chicas */
@@ -223,8 +201,9 @@
   .card.in-cart{ border-color: var(--flavor, var(--clasico)); }
   .promo-tag{
     position:absolute;
-    top: -9px;
-    right: 14px;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
     background: var(--flavor, var(--clasico));
     color: var(--ink);
     font-family: var(--font-mono);
@@ -234,30 +213,47 @@
     border-radius: 6px;
     letter-spacing: 0.02em;
   }
-  .bottle-row{
+  .photo-header{
+    position: relative;
+    height: 160px;
+    width: 100%;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(23,57,46,0.03), rgba(23,57,46,0.07));
     display:flex;
     align-items:center;
-    justify-content:space-between;
-  }
-  .bottle{
-    width: 34px; height: 54px;
-    display:block;
+    justify-content:center;
   }
   .card-photo{
-    height: 100px;
-    width: auto;
-    border-radius: 6px;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
+    object-position: center 30%;
     display:block;
   }
-  .vol{
+  .bottle{
+    width: 44px; height: 70px;
+    display:block;
+  }
+  .vol-badge{
+    position:absolute;
+    bottom: 8px;
+    left: 8px;
+    z-index: 2;
     font-family: var(--font-mono);
     font-size: 11px;
-    letter-spacing: 0.08em;
-    color: rgba(23,57,46,0.55);
+    letter-spacing: 0.06em;
+    color: var(--ink);
+    background: rgba(255,255,255,0.92);
     border: 1px solid var(--line);
     border-radius: 20px;
     padding: 3px 10px;
+  }
+  .card-body{
+    padding: 14px 16px 16px;
+    display:flex;
+    flex-direction:column;
+    gap: 12px;
+    flex: 1;
   }
   .card h3{
     font-family: var(--font-display);
@@ -861,8 +857,9 @@
   .card.sold-out:hover{ transform:none; border-color: var(--line); }
   .sold-out-tag{
     position:absolute;
-    top: -9px;
-    right: 14px;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
     background: var(--ink);
     color: var(--bg);
     font-family: var(--font-mono);
@@ -1096,6 +1093,36 @@
     border:none;
     cursor:pointer;
   }
+
+  /* ---------- AJUSTES MOBILE DEL CATÁLOGO ----------
+     Van al final del <style> a propósito: en CSS, con la misma especificidad,
+     gana la regla que aparece MÁS TARDE en el archivo, sea o no un @media.
+     Si este bloque estuviera antes que las reglas base de .card-body, .vol-badge,
+     etc., esas reglas base (que vienen después) le ganarían y los ajustes mobile
+     nunca se verían — por eso van acá, al final de todo. */
+  @media (max-width: 600px){
+    .card-body{
+      padding: 12px 12px 12px;
+      gap: 10px;
+      align-items: center;
+      text-align: center;
+    }
+    .card h3{ font-size: 15px; }
+    .price{ font-size: 15px; }
+    .vol-badge{ font-size: 9px; padding: 2px 8px; }
+    .photo-header{ height: 110px; }
+    .bottle{ width: 32px; height: 50px; }
+    .price-row{
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .stepper{ gap: 6px; padding: 3px; }
+    .stepper button{ width: 24px; height: 24px; font-size: 14px; }
+    .stepper .qty{ font-size: 13px; min-width: 14px; }
+    .stock-badge{ font-size: 9px; }
+    .promo-tag{ font-size: 9px; padding: 2px 6px; right: 6px; top: 6px; }
+  }
 </style>
 </head>
 <body>
@@ -1275,14 +1302,22 @@ const products = [
   { id: 'berries-475',  flavor: 'berries',   vol: '475ml', price: 8500 },
 ];
 
-// Fotos reales de botella, una por id de producto (mismo nombre de archivo
-// que el id, ej: 'clasico-1L' -> 'clasico-1L.png', subido junto a index.html
-// en el repo). El id que NO esté acá sigue usando el ícono dibujado
-// (bottleSVG) como placeholder — así podés ir agregando fotos de a una sin
-// que las demás se rompan. Para agregar una foto nueva, solo agregá la línea
-// acá con el nombre exacto del archivo que subiste.
+// Fotos de botella, una por id de producto (nombre de archivo, subido junto
+// a index.html en el repo). Por ahora las 8 apuntan a 'placeholder-botella.jpg'
+// (la misma foto de ejemplo para todas) mientras generás las fotos reales de
+// cada sabor. Para reemplazar una: subí el archivo nuevo a GitHub y cambiá
+// solo esa línea acá con el nombre exacto del archivo — no hace falta tocar
+// nada más. El id que NO esté en este mapa usa el ícono dibujado (bottleSVG)
+// como respaldo automático.
 const productImages = {
-  'clasico-1L': 'clasico-1L.png',
+  'clasico-1L': 'placeholder-botella.jpg',
+  'zero-1L': 'placeholder-botella.jpg',
+  'frambuesa-1L': 'placeholder-botella.jpg',
+  'berries-1L': 'placeholder-botella.jpg',
+  'clasico-475': 'placeholder-botella.jpg',
+  'zero-475': 'placeholder-botella.jpg',
+  'frambuesa-475': 'placeholder-botella.jpg',
+  'berries-475': 'placeholder-botella.jpg',
 };
 
 // Mismo criterio: promos de fallback, se pisan con la hoja "Promos" apenas carga.
@@ -1559,20 +1594,22 @@ function renderCatalog(){
 
     card.innerHTML = `
       ${promoTagForProduct(p)}
-      <div class="bottle-row">
+      <div class="photo-header">
         ${bottleVisual}
-        <span class="vol">${p.vol}</span>
+        <span class="vol-badge">${p.vol}</span>
       </div>
-      <div>
-        <h3>${displayName}</h3>
-        <div class="stock-badge" id="stock-${p.id}"></div>
-      </div>
-      <div class="price-row">
-        <span class="price">$${money(price)}</span>
-        <div class="stepper">
-          <button onclick="changeQty('${p.id}', -1)">−</button>
-          <span class="qty" id="qty-${p.id}">${cart[p.id] || 0}</span>
-          <button onclick="changeQty('${p.id}', 1)">+</button>
+      <div class="card-body">
+        <div>
+          <h3>${displayName}</h3>
+          <div class="stock-badge" id="stock-${p.id}"></div>
+        </div>
+        <div class="price-row">
+          <span class="price">$${money(price)}</span>
+          <div class="stepper">
+            <button onclick="changeQty('${p.id}', -1)">−</button>
+            <span class="qty" id="qty-${p.id}">${cart[p.id] || 0}</span>
+            <button onclick="changeQty('${p.id}', 1)">+</button>
+          </div>
         </div>
       </div>
     `;

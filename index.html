@@ -560,52 +560,64 @@
     margin-top: 2px;
   }
 
-  /* ---------- CART BAR (botón circular, esquina inferior derecha, aparece solo con productos) ---------- */
+  /* ---------- CART BAR (tarjeta flotante, esquina inferior derecha) ---------- */
   .cart-bar{
     position: fixed;
     right: 20px; bottom: 20px;
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    background: linear-gradient(90deg, var(--clasico), var(--frambuesa));
-    border: none;
+    background: var(--bg-deep);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 12px 16px;
     display:flex;
     align-items:center;
-    justify-content:center;
+    gap: 14px;
     z-index: 40;
     box-shadow: 0 14px 32px -12px rgba(23,57,46,0.4);
     transform: translateY(16px) scale(0.94);
     opacity: 0;
     pointer-events: none;
     transition: transform .22s ease, opacity .22s ease;
-    cursor: pointer;
   }
   .cart-bar.visible{ transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
-  .cart-bar svg{ width: 24px; height: 24px; display:block; }
-  .cart-bar .cart-badge{
-    position: absolute;
-    top: -4px; right: -4px;
-    background: var(--ink);
-    color: var(--bg);
+  @media (max-width: 480px){
+    .cart-bar{ right: 12px; bottom: 12px; padding: 10px 12px; gap: 10px; }
+    .cart-bar .count{ display: none; } /* en pantallas chicas priorizamos que quepa sin invadir la esquina izquierda */
+    .cart-bar button.open-cart{ padding: 10px 14px; font-size: 13px; }
+  }
+  .cart-bar .info{
+    display:flex;
+    flex-direction:column;
+    gap: 2px;
+  }
+  .cart-bar .count{
     font-family: var(--font-mono);
     font-size: 11px;
-    font-weight: 700;
-    min-width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding: 0 3px;
-    border: 2px solid var(--bg);
+    color: rgba(23,57,46,0.55);
   }
-  @media (max-width: 480px){
-    .cart-bar{ right: 12px; bottom: 12px; width: 50px; height: 50px; }
-    .cart-bar svg{ width: 21px; height: 21px; }
+  .cart-bar .total{
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+  }
+  .cart-bar .savings{
+    color: var(--zero);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .cart-bar button.open-cart{
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 14px;
+    background: linear-gradient(90deg, var(--clasico), var(--frambuesa));
+    color: var(--ink);
+    border: none;
+    border-radius: 10px;
+    padding: 12px 20px;
+    cursor:pointer;
   }
 
   /* ---------- BOTÓN FLOTANTE DE WHATSAPP (esquina inferior izquierda) ---------- */
   .whatsapp-fab{
-
     position: fixed;
     left: 20px; bottom: 20px;
     z-index: 40;
@@ -799,10 +811,7 @@
     border: 1px solid rgba(14,54,52,0.25);
     background: #fff;
     font-family: var(--font-body);
-    /* 16px es a propósito: por debajo de eso, Safari en iPhone hace zoom
-       automático al tocar el campo (y a veces se queda pegado en pantallas
-       siguientes). Con 16px nunca dispara ese zoom. */
-    font-size: 16px;
+    font-size: 13px;
     color: var(--ink);
   }
   .field select{
@@ -812,7 +821,7 @@
     border: 1px solid rgba(14,54,52,0.25);
     background: #fff;
     font-family: var(--font-body);
-    font-size: 16px;
+    font-size: 13px;
     color: var(--ink);
     cursor: pointer;
   }
@@ -1130,7 +1139,7 @@
       <p class="sub">Elaborado con variedad de limones e ingredientes de primera calidad, para un sabor único.</p>
     </div>
     <div class="hero-photo">
-      <img src="limonero.png" alt="Limonero 21 11, con limones amarillos">
+      <img src="limonero.jpg" alt="Limonero 21 11, con limones amarillos">
     </div>
   </div>
 </section>
@@ -1245,23 +1254,19 @@
   </div>
 </div>
 
-<!-- CART BAR: botón circular, solo con productos cargados -->
-<button class="cart-bar" id="cartBar" onclick="openDrawer()" aria-label="Ver carrito">
-  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M3 4H5L5.8 7M5.8 7H20L18 14H7L5.8 7Z" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
-    <circle cx="9" cy="19" r="1.4" fill="var(--ink)"/>
-    <circle cx="17" cy="19" r="1.4" fill="var(--ink)"/>
-  </svg>
-  <span class="cart-badge" id="cartBadge">0</span>
-</button>
+<!-- CART BAR -->
+<div class="cart-bar" id="cartBar">
+  <div class="info">
+    <span class="count" id="cartCount">0 productos</span>
+    <span class="total" id="cartTotal">$0</span>
+    <span class="savings" id="cartSavings" style="display:none;"></span>
+  </div>
+  <button class="open-cart" onclick="openDrawer()">Ver carrito →</button>
+</div>
 
 <!-- BOTÓN FLOTANTE DE WHATSAPP -->
 <a class="whatsapp-fab" id="whatsappFab" href="#" target="_blank" rel="noopener">
-  <span class="whatsapp-fab-icon">
-    <svg viewBox="0 0 32 32" width="20" height="20" fill="#fff" xmlns="http://www.w3.org/2000/svg">
-      <path d="M16.004 3C9.02 3 3.36 8.65 3.36 15.62c0 2.32.63 4.49 1.72 6.36L3 29l7.19-2.02a12.6 12.6 0 0 0 5.81 1.42h.01c6.98 0 12.64-5.65 12.64-12.62C28.65 8.8 23 3.15 16.16 3.15zm7.31 17.6c-.31.87-1.6 1.6-2.55 1.8-.68.14-1.56.25-4.55-.98-3.7-1.52-6.08-5.28-6.27-5.52-.18-.24-1.5-2-1.5-3.82s.94-2.71 1.28-3.08c.31-.34.68-.42.91-.42.23 0 .45 0 .65.01.21.01.49-.08.76.58.31.75 1.05 2.59 1.14 2.78.09.19.15.41.03.65-.12.24-.18.39-.36.6-.18.21-.38.47-.55.63-.18.18-.37.37-.16.72.21.35.94 1.55 2.02 2.51 1.39 1.24 2.56 1.62 2.92 1.8.36.18.57.15.78-.09.21-.24.9-1.05 1.14-1.41.24-.36.48-.3.8-.18.33.12 2.09.99 2.45 1.17.36.18.6.27.69.42.09.15.09.87-.22 1.74z"/>
-    </svg>
-  </span>
+  <span class="whatsapp-fab-icon">💬</span>
   <span class="whatsapp-fab-text">¿Tienes dudas?<br>¡Escríbenos!</span>
 </a>
 
@@ -1717,14 +1722,20 @@ function updateCart(){
   const cartBar = document.getElementById('cartBar');
   const totalQty = order.items.reduce((s,i) => s + i.qty, 0);
 
-  // El botón del carrito solo aparece cuando hay algo cargado — así no ocupa
-  // espacio en la esquina mientras el cliente todavía no eligió nada. El
-  // detalle (cantidades, total, ahorro) se ve al abrir el cajón; acá solo
-  // mostramos un numerito con la cantidad total de unidades.
-  cartBar.classList.toggle('visible', totalQty > 0);
+  // La barra del carrito queda siempre visible (aunque esté vacío), para que
+  // el cliente siempre pueda abrirlo y ver qué tiene, en vez de que aparezca
+  // recién cuando agrega el primer producto.
+  cartBar.classList.add('visible');
 
-  const badgeEl = document.getElementById('cartBadge');
-  if(badgeEl) badgeEl.textContent = totalQty;
+  document.getElementById('cartCount').textContent = `${totalQty} producto${totalQty !== 1 ? 's' : ''}`;
+  document.getElementById('cartTotal').textContent = `$${money(order.total)}`;
+  const savingsEl = document.getElementById('cartSavings');
+  if(order.discount > 0){
+    savingsEl.style.display = 'block';
+    savingsEl.textContent = `Ahorras $${money(order.discount)}`;
+  } else {
+    savingsEl.style.display = 'none';
+  }
 
   renderDrawer(order);
 }
@@ -2235,31 +2246,6 @@ if(window.location.hash === '#gracias'){
   const barEl = document.getElementById('payNotifyBar');
   if(barEl) barEl.classList.add('visible');
   if(statusEl) statusEl.textContent = '⏳ Tu pago quedó pendiente de confirmación (por ejemplo, transferencia en proceso). Te vamos a avisar apenas se confirme.';
-} else if(window.opener && !window.opener.closed){
-  // Esta pestaña es la que se abrió para pagar (payWindow, ver goToMercadoPago).
-  // Si llegamos hasta acá SIN ningún hash de resultado (#gracias/#error/#pendiente),
-  // es porque Mercado Pago la recargó con la página de siempre — esto pasa cuando
-  // el cliente toca "Volver a la tienda" ANTES de llegar a elegir un método de pago
-  // (canceló a mitad de camino, sin que Mercado Pago llegue a avisar nada).
-  //
-  // Sin este chequeo, el cliente se queda mirando un catálogo vacío en ESTA pestaña
-  // (que no tiene ningún rastro de su pedido, porque es una carga nueva de la
-  // página) mientras la pestaña ORIGINAL — la que sí tiene el pedido armado —
-  // sigue esperando en silencio a que vuelva a ella.
-  //
-  // En vez de eso: le avisamos a la pestaña original que revise el estado real
-  // del pago, la traemos al frente, y cerramos esta — así el cliente vuelve solo
-  // adonde tiene que estar, en vez de perderse en una pestaña nueva sin contexto.
-  try {
-    if(typeof window.opener.checkAndShowResult === 'function'){
-      window.opener.checkAndShowResult();
-    }
-    window.opener.focus();
-  } catch(err){
-    // Si el navegador bloquea el acceso entre pestañas por algún motivo, no pasa
-    // nada grave: el cliente simplemente ve el catálogo normal en esta pestaña.
-  }
-  window.close();
 }
 </script>
 

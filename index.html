@@ -560,64 +560,52 @@
     margin-top: 2px;
   }
 
-  /* ---------- CART BAR (tarjeta flotante, esquina inferior derecha) ---------- */
+  /* ---------- CART BAR (botón circular, esquina inferior derecha, aparece solo con productos) ---------- */
   .cart-bar{
     position: fixed;
     right: 20px; bottom: 20px;
-    background: var(--bg-deep);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 12px 16px;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, var(--clasico), var(--frambuesa));
+    border: none;
     display:flex;
     align-items:center;
-    gap: 14px;
+    justify-content:center;
     z-index: 40;
     box-shadow: 0 14px 32px -12px rgba(23,57,46,0.4);
     transform: translateY(16px) scale(0.94);
     opacity: 0;
     pointer-events: none;
     transition: transform .22s ease, opacity .22s ease;
+    cursor: pointer;
   }
   .cart-bar.visible{ transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
-  @media (max-width: 480px){
-    .cart-bar{ right: 12px; bottom: 12px; padding: 10px 12px; gap: 10px; }
-    .cart-bar .count{ display: none; } /* en pantallas chicas priorizamos que quepa sin invadir la esquina izquierda */
-    .cart-bar button.open-cart{ padding: 10px 14px; font-size: 13px; }
-  }
-  .cart-bar .info{
+  .cart-bar svg{ width: 24px; height: 24px; display:block; }
+  .cart-bar .cart-badge{
+    position: absolute;
+    top: -4px; right: -4px;
+    background: var(--ink);
+    color: var(--bg);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
     display:flex;
-    flex-direction:column;
-    gap: 2px;
+    align-items:center;
+    justify-content:center;
+    padding: 0 3px;
+    border: 2px solid var(--bg);
   }
-  .cart-bar .count{
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: rgba(23,57,46,0.55);
-  }
-  .cart-bar .total{
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 18px;
-  }
-  .cart-bar .savings{
-    color: var(--zero);
-    font-family: var(--font-mono);
-    font-size: 11px;
-  }
-  .cart-bar button.open-cart{
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 14px;
-    background: linear-gradient(90deg, var(--clasico), var(--frambuesa));
-    color: var(--ink);
-    border: none;
-    border-radius: 10px;
-    padding: 12px 20px;
-    cursor:pointer;
+  @media (max-width: 480px){
+    .cart-bar{ right: 12px; bottom: 12px; width: 50px; height: 50px; }
+    .cart-bar svg{ width: 21px; height: 21px; }
   }
 
   /* ---------- BOTÓN FLOTANTE DE WHATSAPP (esquina inferior izquierda) ---------- */
   .whatsapp-fab{
+
     position: fixed;
     left: 20px; bottom: 20px;
     z-index: 40;
@@ -1254,15 +1242,15 @@
   </div>
 </div>
 
-<!-- CART BAR -->
-<div class="cart-bar" id="cartBar">
-  <div class="info">
-    <span class="count" id="cartCount">0 productos</span>
-    <span class="total" id="cartTotal">$0</span>
-    <span class="savings" id="cartSavings" style="display:none;"></span>
-  </div>
-  <button class="open-cart" onclick="openDrawer()">Ver carrito →</button>
-</div>
+<!-- CART BAR: botón circular, solo con productos cargados -->
+<button class="cart-bar" id="cartBar" onclick="openDrawer()" aria-label="Ver carrito">
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 4H5L5.8 7M5.8 7H20L18 14H7L5.8 7Z" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="9" cy="19" r="1.4" fill="var(--ink)"/>
+    <circle cx="17" cy="19" r="1.4" fill="var(--ink)"/>
+  </svg>
+  <span class="cart-badge" id="cartBadge">0</span>
+</button>
 
 <!-- BOTÓN FLOTANTE DE WHATSAPP -->
 <a class="whatsapp-fab" id="whatsappFab" href="#" target="_blank" rel="noopener">
@@ -1722,20 +1710,14 @@ function updateCart(){
   const cartBar = document.getElementById('cartBar');
   const totalQty = order.items.reduce((s,i) => s + i.qty, 0);
 
-  // La barra del carrito queda siempre visible (aunque esté vacío), para que
-  // el cliente siempre pueda abrirlo y ver qué tiene, en vez de que aparezca
-  // recién cuando agrega el primer producto.
-  cartBar.classList.add('visible');
+  // El botón del carrito solo aparece cuando hay algo cargado — así no ocupa
+  // espacio en la esquina mientras el cliente todavía no eligió nada. El
+  // detalle (cantidades, total, ahorro) se ve al abrir el cajón; acá solo
+  // mostramos un numerito con la cantidad total de unidades.
+  cartBar.classList.toggle('visible', totalQty > 0);
 
-  document.getElementById('cartCount').textContent = `${totalQty} producto${totalQty !== 1 ? 's' : ''}`;
-  document.getElementById('cartTotal').textContent = `$${money(order.total)}`;
-  const savingsEl = document.getElementById('cartSavings');
-  if(order.discount > 0){
-    savingsEl.style.display = 'block';
-    savingsEl.textContent = `Ahorras $${money(order.discount)}`;
-  } else {
-    savingsEl.style.display = 'none';
-  }
+  const badgeEl = document.getElementById('cartBadge');
+  if(badgeEl) badgeEl.textContent = totalQty;
 
   renderDrawer(order);
 }

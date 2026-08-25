@@ -799,7 +799,10 @@
     border: 1px solid rgba(14,54,52,0.25);
     background: #fff;
     font-family: var(--font-body);
-    font-size: 13px;
+    /* 16px es a propósito: por debajo de eso, Safari en iPhone hace zoom
+       automático al tocar el campo (y a veces se queda pegado en pantallas
+       siguientes). Con 16px nunca dispara ese zoom. */
+    font-size: 16px;
     color: var(--ink);
   }
   .field select{
@@ -809,7 +812,7 @@
     border: 1px solid rgba(14,54,52,0.25);
     background: #fff;
     font-family: var(--font-body);
-    font-size: 13px;
+    font-size: 16px;
     color: var(--ink);
     cursor: pointer;
   }

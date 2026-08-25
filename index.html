@@ -2246,6 +2246,31 @@ if(window.location.hash === '#gracias'){
   const barEl = document.getElementById('payNotifyBar');
   if(barEl) barEl.classList.add('visible');
   if(statusEl) statusEl.textContent = '⏳ Tu pago quedó pendiente de confirmación (por ejemplo, transferencia en proceso). Te vamos a avisar apenas se confirme.';
+} else if(window.opener && !window.opener.closed){
+  // Esta pestaña es la que se abrió para pagar (payWindow, ver goToMercadoPago).
+  // Si llegamos hasta acá SIN ningún hash de resultado (#gracias/#error/#pendiente),
+  // es porque Mercado Pago la recargó con la página de siempre — esto pasa cuando
+  // el cliente toca "Volver a la tienda" ANTES de llegar a elegir un método de pago
+  // (canceló a mitad de camino, sin que Mercado Pago llegue a avisar nada).
+  //
+  // Sin este chequeo, el cliente se queda mirando un catálogo vacío en ESTA pestaña
+  // (que no tiene ningún rastro de su pedido, porque es una carga nueva de la
+  // página) mientras la pestaña ORIGINAL — la que sí tiene el pedido armado —
+  // sigue esperando en silencio a que vuelva a ella.
+  //
+  // En vez de eso: le avisamos a la pestaña original que revise el estado real
+  // del pago, la traemos al frente, y cerramos esta — así el cliente vuelve solo
+  // adonde tiene que estar, en vez de perderse en una pestaña nueva sin contexto.
+  try {
+    if(typeof window.opener.checkAndShowResult === 'function'){
+      window.opener.checkAndShowResult();
+    }
+    window.opener.focus();
+  } catch(err){
+    // Si el navegador bloquea el acceso entre pestañas por algún motivo, no pasa
+    // nada grave: el cliente simplemente ve el catálogo normal en esta pestaña.
+  }
+  window.close();
 }
 </script>
 
